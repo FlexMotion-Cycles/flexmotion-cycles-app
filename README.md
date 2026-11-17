@@ -22,7 +22,7 @@
 
 | Resource | Link |
 |----------|------|
-| Jira backlog |  |
+| Jira backlog | https://flexmotion-cycles.atlassian.net/jira/software/projects/FM/boards/1/backlog |
 | Source repository | https://github.com/FlexMotion-Cycles/flexmotion-cycles-app |
 | Related repositories |  |
 | API documentation |  |
