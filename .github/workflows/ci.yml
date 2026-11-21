@@ -36,3 +36,29 @@ jobs:
       - name: Parar a stack
         if: always()
         run: docker compose down -v
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Run unit and integration tests
+        working-directory: projFlexMotion
+        run: mvn -B verify
+
+      - name: Import test results into Xray
+        if: always() && github.event_name == 'push'
+        uses: mikepenz/xray-action@v4
+        with:
+          username: ${{ secrets.XRAY_CLIENT_ID }}
+          password: ${{ secrets.XRAY_CLIENT_SECRET }}
+          testFormat: junit
+          testPaths: projFlexMotion/target/TEST-junit-jupiter*.xml
+          projectKey: FM
