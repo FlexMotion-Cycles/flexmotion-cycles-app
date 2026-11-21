@@ -1,5 +1,7 @@
 # FlexMotion Cycles
 
+[![CI FlexMotion Cycles](https://github.com/FlexMotion-Cycles/flexmotion-cycles-app/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/FlexMotion-Cycles/flexmotion-cycles-app/actions/workflows/ci.yml)
+
 ## Project abstract
 
 **FlexMotion Cycles**

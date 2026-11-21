@@ -3,7 +3,7 @@ name: CI FlexMotion Cycles
 on:
   pull_request:
   push:
-    branches: [develop, main]
+    branches: ['**']
 
 jobs:
   stack:
@@ -54,7 +54,7 @@ jobs:
         run: mvn -B verify
 
       - name: Import test results into Xray
-        if: always() && github.event_name == 'push'
+        if: always() && github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
         uses: mikepenz/xray-action@v4
         with:
           username: ${{ secrets.XRAY_CLIENT_ID }}
