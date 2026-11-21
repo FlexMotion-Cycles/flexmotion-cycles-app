@@ -1,0 +1,84 @@
+name: flexmotion-cycles
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_HOST_PORT}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - flexmotion
+
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_ENABLED_PLUGINS: ${RABBITMQ_ENABLED_PLUGINS}
+      RABBITMQ_ENABLED_PLUGINS_FILE: ${RABBITMQ_ENABLED_PLUGINS_FILE}
+    ports:
+      - "${RABBITMQ_MQTT_HOST_PORT}:1883"
+      - "${RABBITMQ_AMQP_HOST_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_HOST_PORT}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - flexmotion
+
+  backend:
+    build:
+      context: ./projFlexMotion
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: ${BACKEND_PORT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL}
+      MQTT_USERNAME: ${RABBITMQ_USER}
+      MQTT_PASSWORD: ${RABBITMQ_PASSWORD}
+      MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      GEOLOCATION_BASE_URL: ${GEOLOCATION_BASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JAVA_OPTS: ${JAVA_OPTS}
+    ports:
+      - "${BACKEND_HOST_PORT}:${BACKEND_PORT}"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      - flexmotion
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+
+networks:
+  flexmotion:
