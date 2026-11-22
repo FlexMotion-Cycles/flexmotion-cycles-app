@@ -85,4 +85,13 @@ public class Vehicle {
     public long getVersion() {
         return version;
     }
+
+    /** AVAILABLE → IN_USE: the lock opened and the vehicle left its dock. */
+    public void startUse() {
+        if (status != VehicleStatus.AVAILABLE) {
+            throw new IllegalStateException("Vehicle " + code + " is " + status + ", not AVAILABLE");
+        }
+        status = VehicleStatus.IN_USE;
+        station = null;
+    }
 }
