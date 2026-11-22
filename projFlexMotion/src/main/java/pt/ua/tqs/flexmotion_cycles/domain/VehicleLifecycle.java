@@ -7,10 +7,7 @@ import java.util.Set;
 
 import pt.ua.tqs.flexmotion_cycles.domain.exceptions.InvalidStateTransitionException;
 
-/**
- * Vehicle lifecycle rules
- */
-public class VehicleTransition {
+public class VehicleLifecycle {
 
     private static final Map<VehicleState, Set<VehicleState>> ALLOWED = new EnumMap<>(VehicleState.class);
 
