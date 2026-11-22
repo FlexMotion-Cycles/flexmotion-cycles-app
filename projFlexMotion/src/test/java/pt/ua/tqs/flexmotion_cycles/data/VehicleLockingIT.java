@@ -3,6 +3,7 @@ package pt.ua.tqs.flexmotion_cycles.data;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,11 +46,16 @@ class VehicleLockingIT {
 
     @BeforeEach
     void setUp() {
-        vehicleRepository.deleteAll();
-        stationRepository.deleteAll();
         Station central = stationRepository.save(
                 new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL));
         vehicleRepository.save(new Vehicle("EB-01", VehicleType.E_BIKE, 80, central));
+    }
+
+    /** This test commits, so it must not leave data for the other tests on this database. */
+    @AfterEach
+    void cleanUp() {
+        vehicleRepository.deleteAll();
+        stationRepository.deleteAll();
     }
 
     @Test
