@@ -1,0 +1,10 @@
+package pt.ua.tqs.flexmotion_cycles.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+
+@Embeddable
+public record GeoPoint(
+        @Column(nullable = false) double latitude,
+        @Column(nullable = false) double longitude) {
+}
