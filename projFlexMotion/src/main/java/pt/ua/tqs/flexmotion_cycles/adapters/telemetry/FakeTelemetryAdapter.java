@@ -48,4 +48,9 @@ public class FakeTelemetryAdapter implements TelemetryPort {
     public List<String> unlockCommands() {
         return List.copyOf(unlockCommands);
     }
+
+    /** Forgets the recorded commands, so each test starts clean. */
+    public void reset() {
+        unlockCommands.clear();
+    }
 }
