@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 import jakarta.validation.Validation;
@@ -28,7 +26,7 @@ class TelemetryMessageParserTest {
     @Test
     @Requirement("FM-26")
     void parsesValidReadingWithoutFault() throws IOException {
-        TelemetryReading reading = parser.parse(fixture("valid-reading.json"));
+        TelemetryReading reading = parser.parse(TelemetryFixtures.read("valid-reading.json"));
 
         assertThat(reading).isEqualTo(new TelemetryReading("EB-0001",
                 Instant.parse("2026-11-22T16:05:00Z"), 19,
@@ -38,7 +36,8 @@ class TelemetryMessageParserTest {
     @Test
     @Requirement("FM-26")
     void parsesFaultEvent() throws IOException {
-        TelemetryReading reading = parser.parse(fixture("valid-reading-with-fault.json"));
+        TelemetryReading reading =
+                parser.parse(TelemetryFixtures.read("valid-reading-with-fault.json"));
 
         assertThat(reading.faultEvent()).isEqualTo("BRAKE_FAILURE");
     }
@@ -110,13 +109,6 @@ class TelemetryMessageParserTest {
     }
 
     private ObjectNode validMessage() throws IOException {
-        return (ObjectNode) jsonMapper.readTree(fixture("valid-reading.json"));
-    }
-
-    private static String fixture(String name) throws IOException {
-        try (InputStream in = TelemetryMessageParserTest.class
-                .getResourceAsStream("/telemetry/" + name)) {
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        }
+        return (ObjectNode) jsonMapper.readTree(TelemetryFixtures.read("valid-reading.json"));
     }
 }
