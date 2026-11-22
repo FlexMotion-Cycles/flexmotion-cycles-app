@@ -1,7 +1,5 @@
 package pt.ua.tqs.flexmotion_cycles.domain;
 
-import java.util.UUID;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,8 +22,8 @@ import jakarta.persistence.Version;
 public class Vehicle {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false, unique = true)
     private String code;
@@ -62,7 +60,7 @@ public class Vehicle {
         this.state = VehicleState.AVAILABLE;
     }
 
-    public UUID getId() {
+    public Long getId() {
         return id;
     }
 

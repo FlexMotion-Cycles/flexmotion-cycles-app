@@ -1,7 +1,6 @@
 package pt.ua.tqs.flexmotion_cycles.domain;
 
 import java.time.LocalTime;
-import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -22,8 +21,8 @@ import jakarta.persistence.Table;
 public class Station {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false)
     private String name;
@@ -79,7 +78,7 @@ public class Station {
         return station;
     }
 
-    public UUID getId() {
+    public Long getId() {
         return id;
     }
 
