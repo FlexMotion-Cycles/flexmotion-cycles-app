@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,6 +90,19 @@ class VehicleRepositoryIT {
         persistVehicle("WB-01", VehicleType.WHEELCHAIR_BIKE, 90);
 
         assertThat(findEligibleCodes()).isEmpty();
+    }
+
+    @Test
+    @Requirement("FM-27")
+    void countsOnlyVehiclesThatOccupyADock() {
+        persistVehicle("EB-01", VehicleType.E_BIKE, 80);
+        forceStatus(persistVehicle("EB-02", VehicleType.E_BIKE, 80), VehicleStatus.MAINTENANCE);
+        forceStatus(persistVehicle("EB-03", VehicleType.E_BIKE, 80), VehicleStatus.IN_USE);
+
+        long docked = vehicleRepository.countByStationAndStatusNotIn(central,
+                EnumSet.of(VehicleStatus.IN_USE, VehicleStatus.REMOVED));
+
+        assertThat(docked).isEqualTo(2);
     }
 
     private Vehicle persistVehicle(String code, VehicleType type, int batteryLevel) {

@@ -5,7 +5,9 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
+import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
@@ -27,4 +29,6 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     List<Vehicle> findAvailableWithoutOpenTicket(
             @Param("minBatteryLevel") int minBatteryLevel,
             @Param("types") Collection<VehicleType> types);
+
+    long countByStationAndStatusNotIn(Station station, Collection<VehicleStatus> statuses);
 }
