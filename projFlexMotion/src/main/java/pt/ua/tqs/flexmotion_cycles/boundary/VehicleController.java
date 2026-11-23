@@ -26,6 +26,7 @@ public class VehicleController {
     }
 
     @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('OPERATOR')")
     public ResponseEntity<VehicleResponse> activate(@PathVariable Long id) {
         return ResponseEntity.ok(VehicleResponse.from(vehicleService.activate(id)));
     }

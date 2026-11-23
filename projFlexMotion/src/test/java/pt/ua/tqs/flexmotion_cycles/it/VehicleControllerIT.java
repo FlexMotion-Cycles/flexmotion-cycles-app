@@ -137,6 +137,19 @@ public class VehicleControllerIT {
 
     @Test
     @Requirement("FM-22")
+    @WithMockUser(roles = "END_USER")
+    @DisplayName("A user without the OPERATOR role cannot activate a vehicle: 403")
+    void nonOperatorCannotActivate() throws Exception {
+        Vehicle vehicle = savedVehicleIn(VehicleState.MAINTENANCE);
+
+        mockmvc.perform(patch(BASE_URL + "/activate", vehicle.getId()).with(csrf()))
+                .andExpect(status().isForbidden());
+
+        assertEquals(VehicleState.MAINTENANCE, stateInDatabase(vehicle.getId()));
+    }
+
+    @Test
+    @Requirement("FM-22")
     @DisplayName("An unauthenticated request gets 401")
     void unauthenticatedRequestIsUnauthorized() throws Exception {
         Vehicle vehicle = savedVehicleIn(VehicleState.AVAILABLE);
