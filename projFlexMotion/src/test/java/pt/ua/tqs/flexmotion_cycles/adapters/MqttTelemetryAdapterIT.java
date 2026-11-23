@@ -23,8 +23,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
@@ -34,7 +32,6 @@ import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
 
 @SpringBootTest
 @Import({TestcontainersConfiguration.class, MqttTelemetryAdapterIT.CollectorConfig.class})
-@Testcontainers
 class MqttTelemetryAdapterIT {
 
     private static final String RABBITMQ_IMAGE = "rabbitmq:4.1-management-alpine";
@@ -46,7 +43,6 @@ class MqttTelemetryAdapterIT {
     private static final int QOS_AT_LEAST_ONCE = 1;
     private static final long RECEIVE_TIMEOUT_SECONDS = 10;
 
-    @Container
     static final GenericContainer<?> RABBITMQ =
             new GenericContainer<>(DockerImageName.parse(RABBITMQ_IMAGE))
                     .withEnv("RABBITMQ_DEFAULT_USER", USERNAME)
@@ -55,6 +51,10 @@ class MqttTelemetryAdapterIT {
                     .withEnv("RABBITMQ_ENABLED_PLUGINS_FILE", "/var/lib/rabbitmq/enabled_plugins")
                     .withExposedPorts(MQTT_PORT)
                     .waitingFor(Wait.forLogMessage(".*Server startup complete.*", 1));
+
+    static {
+        RABBITMQ.start();
+    }
 
     @DynamicPropertySource
     static void telemetryProperties(DynamicPropertyRegistry registry) {
