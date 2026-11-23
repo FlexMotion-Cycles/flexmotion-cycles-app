@@ -8,11 +8,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
 
 /**
- * In-memory stand-in for the fleet simulator until the MQTT adapter exists (US-08).
+ * In-memory stand-in for the fleet simulator, for tests and demos without the simulator.
  * With auto-confirm on, every unlock command is answered at once with a lock-opened
  * event; with it off, tests decide when the lock opens.
  */
@@ -43,6 +44,10 @@ public class FakeTelemetryAdapter implements TelemetryPort {
     /** Simulates the telemetry message "lock of this vehicle opened at this time". */
     public void reportLockOpened(String vehicleCode, Instant openedAt) {
         eventPublisher.publishEvent(new LockOpenedEvent(vehicleCode, openedAt));
+    }
+
+    public void reportReading(TelemetryReading reading) {
+        eventPublisher.publishEvent(reading);
     }
 
     public List<String> unlockCommands() {

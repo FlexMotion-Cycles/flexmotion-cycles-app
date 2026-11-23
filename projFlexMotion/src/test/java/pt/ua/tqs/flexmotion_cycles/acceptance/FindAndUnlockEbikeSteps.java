@@ -24,6 +24,7 @@ import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.MaintenanceTicket;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
+import pt.ua.tqs.flexmotion_cycles.domain.TicketOrigin;
 import pt.ua.tqs.flexmotion_cycles.domain.TripStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
@@ -94,7 +95,8 @@ public class FindAndUnlockEbikeSteps {
 
     @Given("{string} has an open maintenance ticket")
     public void hasAnOpenMaintenanceTicket(String code) {
-        maintenanceTicketRepository.save(new MaintenanceTicket(vehicles.get(code), TICKET_OPENED_AT));
+        maintenanceTicketRepository.save(
+                new MaintenanceTicket(vehicles.get(code), TicketOrigin.STAFF, TICKET_OPENED_AT));
     }
 
     @Given("{int} vehicles are docked at {string}")

@@ -33,15 +33,30 @@ public class MaintenanceTicket {
     @Column(nullable = false)
     private Instant openedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TicketOrigin origin;
+
+    private String faultCode;
+
     protected MaintenanceTicket() {
         // Required by JPA.
     }
 
     /** A new ticket starts OPEN. */
-    public MaintenanceTicket(Vehicle vehicle, Instant openedAt) {
+    public MaintenanceTicket(Vehicle vehicle, TicketOrigin origin, Instant openedAt) {
         this.vehicle = vehicle;
+        this.origin = origin;
         this.openedAt = openedAt;
         this.status = TicketStatus.OPEN;
+    }
+
+    public static MaintenanceTicket forFaultEvent(Vehicle vehicle, String faultCode,
+            Instant openedAt) {
+        MaintenanceTicket ticket = new MaintenanceTicket(vehicle, TicketOrigin.FAULT_EVENT,
+                openedAt);
+        ticket.faultCode = faultCode;
+        return ticket;
     }
 
     public Long getId() {
@@ -58,5 +73,13 @@ public class MaintenanceTicket {
 
     public Instant getOpenedAt() {
         return openedAt;
+    }
+
+    public TicketOrigin getOrigin() {
+        return origin;
+    }
+
+    public String getFaultCode() {
+        return faultCode;
     }
 }

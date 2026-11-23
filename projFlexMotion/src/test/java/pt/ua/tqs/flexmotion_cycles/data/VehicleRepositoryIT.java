@@ -20,6 +20,7 @@ import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
 import pt.ua.tqs.flexmotion_cycles.domain.MaintenanceTicket;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
+import pt.ua.tqs.flexmotion_cycles.domain.TicketOrigin;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -140,7 +141,8 @@ class VehicleRepositoryIT {
     @Requirement("FM-27")
     void excludesVehicleWithOpenTicket() {
         Vehicle vehicle = persistVehicle("EB-03", VehicleType.E_BIKE, 80);
-        entityManager.persist(new MaintenanceTicket(vehicle, Instant.parse("2026-11-22T09:00:00Z")));
+        entityManager.persist(new MaintenanceTicket(vehicle, TicketOrigin.STAFF,
+                Instant.parse("2026-11-22T09:00:00Z")));
 
         assertThat(findEligibleCodes()).isEmpty();
     }
