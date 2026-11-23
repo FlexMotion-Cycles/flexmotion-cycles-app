@@ -3,6 +3,7 @@ package pt.ua.tqs.flexmotion_cycles.adapters.telemetry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -83,6 +84,16 @@ class MqttTelemetryAdapterTest {
         adapter.handle(VALID_PAYLOAD);
 
         verify(eventPublisher, times(1)).publishEvent(READING);
+    }
+
+    @Test
+    @Requirement("FM-26")
+    void keepsConsumingWhenProcessingFails() {
+        when(parser.parse(VALID_PAYLOAD)).thenReturn(READING);
+        doThrow(new IllegalStateException("Processing failed"))
+                .when(eventPublisher).publishEvent(READING);
+
+        assertThatCode(() -> adapter.handle(VALID_PAYLOAD)).doesNotThrowAnyException();
     }
 
     @Test

@@ -44,6 +44,10 @@ public class MqttTelemetryAdapter implements TelemetryPort {
             log.warn("Discarded telemetry message: {}", e.getMessage());
             return;
         }
-        eventPublisher.publishEvent(reading);
+        try {
+            eventPublisher.publishEvent(reading);
+        } catch (RuntimeException e) {
+            log.error("Failed to process telemetry for vehicle {}", reading.vehicleCode(), e);
+        }
     }
 }
