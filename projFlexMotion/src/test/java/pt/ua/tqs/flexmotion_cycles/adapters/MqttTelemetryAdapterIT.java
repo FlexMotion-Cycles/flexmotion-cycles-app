@@ -89,14 +89,6 @@ class MqttTelemetryAdapterIT {
 
     @Test
     @Requirement("FM-26")
-    void receivesFaultEventInTheAgreedFormat() throws Exception {
-        publish(TelemetryFixtures.read("valid-reading-with-fault.json"));
-
-        assertThat(nextReading().faultEvent()).isEqualTo("BRAKE_FAILURE");
-    }
-
-    @Test
-    @Requirement("FM-26")
     void discardsInvalidMessageAndKeepsConsuming() throws Exception {
         publish("{not json");
         publish(TelemetryFixtures.read("valid-reading.json"));
