@@ -1,5 +1,8 @@
 package pt.ua.tqs.flexmotion_cycles.services;
 
+import java.util.Comparator;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
+import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
@@ -44,9 +49,31 @@ public class TelemetryService {
 
     private void apply(Vehicle vehicle, TelemetryReading reading) {
         boolean wasLocked = vehicle.isLocked();
-        if (vehicle.applyTelemetry(reading) && wasLocked && !reading.locked()) {
+        if (!vehicle.applyTelemetry(reading)) {
+            return;
+        }
+        updateStation(vehicle, reading);
+        if (wasLocked && !reading.locked()) {
             eventPublisher.publishEvent(new LockOpenedEvent(vehicle.getCode(),
                     reading.timestamp()));
         }
+    }
+
+    private void updateStation(Vehicle vehicle, TelemetryReading reading) {
+        if (!reading.locked()) {
+            vehicle.undock();
+            return;
+        }
+        nearestStationWithinDockingRadius(reading.position())
+                .ifPresentOrElse(vehicle::dockAt, vehicle::undock);
+    }
+
+    private Optional<Station> nearestStationWithinDockingRadius(GeoPoint position) {
+        return stationRepository.findAll().stream()
+                .filter(station -> station.getLocation() != null)
+                .min(Comparator.comparingDouble(
+                        station -> station.getLocation().distanceMetersTo(position)))
+                .filter(station ->
+                        station.getLocation().distanceMetersTo(position) <= dockingRadiusMeters);
     }
 }

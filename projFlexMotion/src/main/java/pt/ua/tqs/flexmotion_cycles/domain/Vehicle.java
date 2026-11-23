@@ -153,10 +153,10 @@ public class Vehicle {
     }
 
     public void dockAt(Station station) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        this.station = station;
     }
 
     public void undock() {
-        throw new UnsupportedOperationException("Not implemented yet");
+        this.station = null;
     }
 }
