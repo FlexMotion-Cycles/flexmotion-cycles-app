@@ -167,9 +167,9 @@ The pull request title must also contain `FM-<n>`.
   criteria) automated with Cucumber. Feature files live under `src/test/resources`.
 - **End-to-end**: Playwright for core UI flows; not run on every build.
 - **Non-functional**: k6 load tests against the SLOs in the Product Specs report.
-- **Xray traceability**: every test must be linked to its story. Use
-  `@Requirement("FM-<n>")` (xray-junit-extensions) once the dependency is added, or link
-  the test to the story manually in Xray. Do not rename test packages/methods casually:
+- **Xray traceability**: every test must be linked to its story. Put `@Requirement("FM-<n>")`
+  on **each test method** (the listener ignores it on the class); link Cucumber scenarios to
+  the story manually in Xray. Do not rename test packages/methods casually:
   Xray auto-provisions tests by package + method name.
 - Never weaken, skip or delete a failing test to make the build pass; report it.
 
@@ -177,8 +177,9 @@ The pull request title must also contain `FM-<n>`.
 
 - Java follows the **AOSP Java code style**. Constructor injection; no field `@Autowired`.
 - Validate input with Bean Validation on DTOs; return proper HTTP status codes.
-- Business constants (fees, limits, durations) are named constants or configuration, not
-  magic numbers scattered in code.
+- **No hardcoded values.** Business constants (fees, limits, durations) are named constants
+  or configuration, never magic numbers. Environment values (URLs, hosts, ports, topics,
+  credentials) come from `application.properties` / environment variables, never from code.
 - Keep comments short and useful; do not comment the obvious.
 - Do not add dependencies without explaining why and asking the human first.
 

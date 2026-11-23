@@ -23,7 +23,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 
-@SpringBootTest(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
+@SpringBootTest
 @AutoConfigureMockMvc 
 @Import(TestcontainersConfiguration.class)
 @DisplayName("Vehicle REST API (US-04)")
@@ -46,7 +46,7 @@ public class VehicleControllerIT {
     }
 
     private Vehicle savedVehicleIn(VehicleState state) {
-        Vehicle vehicle = new Vehicle("EB-001", VehicleType.E_BIKE, 80, true);
+        Vehicle vehicle = new Vehicle("EB-001", VehicleType.E_BIKE, null);
         vehicle.setState(state);
         return vehicleRepository.save(vehicle);
     }

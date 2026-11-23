@@ -1,9 +1,8 @@
-package pt.ua.tqs.flexmotion_cycles.bdd;
+package pt.ua.tqs.flexmotion_cycles.acceptance;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -25,14 +24,9 @@ public class VehicleLifecycleSteps {
         this.vehicleRepository = vehicleRepository;
     }
 
-    @Before 
-    void setUp() {
-        vehicleRepository.deleteAll();
-    }
-
     @Given("a vehicle in state {string}")
     public void aVehicleInState(String state) {
-        Vehicle vehicle = new Vehicle("EB-001", VehicleType.E_BIKE, 80, true);
+        Vehicle vehicle = new Vehicle("EB-001", VehicleType.E_BIKE, null);
         vehicle.setState(VehicleState.valueOf(state));
         vehicleId = vehicleRepository.save(vehicle).getId();
     }

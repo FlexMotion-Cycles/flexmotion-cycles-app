@@ -1,4 +1,4 @@
-@FM-22
+@FM-22 @US-04
 Feature: Vehicle lifecycle
   As the operations manager,
   I want vehicle states to change only through valid transitions,

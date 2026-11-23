@@ -25,7 +25,7 @@ class VehicleLifecycleTest {
     }
 
     private static Vehicle vehicleIn(VehicleState state) {
-        Vehicle vehicle = new Vehicle("EB-001", VehicleType.E_BIKE, 80, true);
+        Vehicle vehicle = new Vehicle("EB-001", VehicleType.E_BIKE, null);
         vehicle.setState(state);
         return vehicle;
     }

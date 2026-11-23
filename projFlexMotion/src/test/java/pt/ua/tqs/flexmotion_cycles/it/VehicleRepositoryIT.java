@@ -37,7 +37,7 @@ public class VehicleRepositoryIT {
     }
 
     private Vehicle persistNewVehicle() {
-        Vehicle vehicle = entityManager.persistFlushFind(new Vehicle("EB-001", VehicleType.E_BIKE, 80, true));
+        Vehicle vehicle = entityManager.persistFlushFind(new Vehicle("EB-001", VehicleType.E_BIKE, null));
         entityManager.clear();
         return vehicle;
     }
