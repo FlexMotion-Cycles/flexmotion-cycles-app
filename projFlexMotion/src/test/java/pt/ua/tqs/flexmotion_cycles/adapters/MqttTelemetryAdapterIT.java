@@ -29,6 +29,7 @@ import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
 import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
+import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
 
 @SpringBootTest
 @Import({TestcontainersConfiguration.class, MqttTelemetryAdapterIT.CollectorConfig.class})
@@ -69,10 +70,12 @@ class MqttTelemetryAdapterIT {
     }
 
     private final TelemetryReadingCollector collector;
+    private final TelemetryPort telemetryPort;
 
     @Autowired
-    MqttTelemetryAdapterIT(TelemetryReadingCollector collector) {
+    MqttTelemetryAdapterIT(TelemetryReadingCollector collector, TelemetryPort telemetryPort) {
         this.collector = collector;
+        this.telemetryPort = telemetryPort;
     }
 
     @BeforeEach
@@ -100,6 +103,23 @@ class MqttTelemetryAdapterIT {
         assertThat(collector.readings).isEmpty();
     }
 
+    @Test
+    @Requirement("FM-26")
+    void sendsUnlockCommandThroughTheBroker() throws Exception {
+        BlockingQueue<String> commands = new LinkedBlockingQueue<>();
+        try (MqttClient vehicle = connect("vehicle-it-subscriber")) {
+            vehicle.subscribe(COMMAND_TOPIC_PREFIX + "/" + VEHICLE_CODE, QOS_AT_LEAST_ONCE,
+                    (topic, message) -> commands.add(
+                            new String(message.getPayload(), StandardCharsets.UTF_8)));
+
+            telemetryPort.sendUnlockCommand(VEHICLE_CODE);
+
+            assertThat(commands.poll(RECEIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+                    .isEqualTo("{\"command\":\"UNLOCK\"}");
+            vehicle.disconnect();
+        }
+    }
+
     private TelemetryReading nextReading() throws InterruptedException {
         TelemetryReading reading =
                 collector.readings.poll(RECEIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -108,16 +128,20 @@ class MqttTelemetryAdapterIT {
     }
 
     private static void publish(String payload) throws Exception {
-        try (MqttClient client = new MqttClient(brokerUrl(), "telemetry-it-publisher",
-                new MemoryPersistence())) {
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setUserName(USERNAME);
-            options.setPassword(PASSWORD.toCharArray());
-            client.connect(options);
+        try (MqttClient client = connect("telemetry-it-publisher")) {
             client.publish(TOPIC_PREFIX + "/" + VEHICLE_CODE,
                     payload.getBytes(StandardCharsets.UTF_8), QOS_AT_LEAST_ONCE, false);
             client.disconnect();
         }
+    }
+
+    private static MqttClient connect(String clientId) throws Exception {
+        MqttClient client = new MqttClient(brokerUrl(), clientId, new MemoryPersistence());
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setUserName(USERNAME);
+        options.setPassword(PASSWORD.toCharArray());
+        client.connect(options);
+        return client;
     }
 
     private static String brokerUrl() {
