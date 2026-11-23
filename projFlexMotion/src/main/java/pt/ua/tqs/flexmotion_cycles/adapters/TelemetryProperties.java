@@ -8,5 +8,6 @@ record TelemetryProperties(
         String clientId,
         String username,
         String password,
-        String topicPrefix) {
+        String topicPrefix,
+        String commandTopicPrefix) {
 }

@@ -39,6 +39,7 @@ class MqttTelemetryAdapterIT {
     private static final String USERNAME = "telemetry-it";
     private static final String PASSWORD = "telemetry-it";
     private static final String TOPIC_PREFIX = "flexmotion/telemetry";
+    private static final String COMMAND_TOPIC_PREFIX = "flexmotion/commands";
     private static final String VEHICLE_CODE = "EB-0001";
     private static final int QOS_AT_LEAST_ONCE = 1;
     private static final long RECEIVE_TIMEOUT_SECONDS = 10;
@@ -58,12 +59,13 @@ class MqttTelemetryAdapterIT {
 
     @DynamicPropertySource
     static void telemetryProperties(DynamicPropertyRegistry registry) {
-        registry.add("flexmotion.telemetry.enabled", () -> "true");
+        registry.add("flexmotion.telemetry.adapter", () -> "mqtt");
         registry.add("flexmotion.telemetry.broker-url", MqttTelemetryAdapterIT::brokerUrl);
         registry.add("flexmotion.telemetry.client-id", () -> "flexmotion-backend-it");
         registry.add("flexmotion.telemetry.username", () -> USERNAME);
         registry.add("flexmotion.telemetry.password", () -> PASSWORD);
         registry.add("flexmotion.telemetry.topic-prefix", () -> TOPIC_PREFIX);
+        registry.add("flexmotion.telemetry.command-topic-prefix", () -> COMMAND_TOPIC_PREFIX);
     }
 
     private final TelemetryReadingCollector collector;
