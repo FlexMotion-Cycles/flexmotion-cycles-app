@@ -177,8 +177,9 @@ The pull request title must also contain `FM-<n>`.
 
 - Java follows the **AOSP Java code style**. Constructor injection; no field `@Autowired`.
 - Validate input with Bean Validation on DTOs; return proper HTTP status codes.
-- Business constants (fees, limits, durations) are named constants or configuration, not
-  magic numbers scattered in code.
+- *No hardcoded values.* Business constants (fees, limits, durations) are named constants
+  or configuration, never magic numbers. Environment values (URLs, hosts, ports, topics,
+  credentials) come from application.properties / environment variables, never from code.
 - Keep comments short and useful; do not comment the obvious.
 - Do not add dependencies without explaining why and asking the human first.
 
