@@ -1,18 +1,20 @@
 package pt.ua.tqs.flexmotion_cycles.adapters;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
@@ -30,23 +32,24 @@ class MqttTelemetryAdapterTest {
     @Mock
     private TelemetryMessageParser parser;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private MqttTelemetryAdapter adapter;
-    private final List<TelemetryReading> received = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
-        adapter = new MqttTelemetryAdapter(parser);
-        adapter.subscribe(received::add);
+        adapter = new MqttTelemetryAdapter(parser, eventPublisher);
     }
 
     @Test
     @Requirement("FM-26")
-    void deliversValidReadingToSubscriber() {
+    void publishesValidReadingAsEvent() {
         when(parser.parse(VALID_PAYLOAD)).thenReturn(READING);
 
         adapter.handle(VALID_PAYLOAD);
 
-        assertThat(received).containsExactly(READING);
+        verify(eventPublisher).publishEvent(READING);
     }
 
     @Test
@@ -56,7 +59,7 @@ class MqttTelemetryAdapterTest {
                 .thenThrow(new InvalidTelemetryMessageException("Malformed telemetry message"));
 
         assertThatCode(() -> adapter.handle(INVALID_PAYLOAD)).doesNotThrowAnyException();
-        assertThat(received).isEmpty();
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -69,19 +72,6 @@ class MqttTelemetryAdapterTest {
         adapter.handle(INVALID_PAYLOAD);
         adapter.handle(VALID_PAYLOAD);
 
-        assertThat(received).containsExactly(READING);
-    }
-
-    @Test
-    @Requirement("FM-26")
-    void deliversReadingToEverySubscriber() {
-        List<TelemetryReading> otherSubscriber = new ArrayList<>();
-        adapter.subscribe(otherSubscriber::add);
-        when(parser.parse(VALID_PAYLOAD)).thenReturn(READING);
-
-        adapter.handle(VALID_PAYLOAD);
-
-        assertThat(received).containsExactly(READING);
-        assertThat(otherSubscriber).containsExactly(READING);
+        verify(eventPublisher, times(1)).publishEvent(READING);
     }
 }

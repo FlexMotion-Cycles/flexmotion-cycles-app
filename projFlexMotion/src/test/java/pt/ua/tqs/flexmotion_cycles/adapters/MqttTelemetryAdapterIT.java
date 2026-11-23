@@ -15,6 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.event.EventListener;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -28,10 +31,9 @@ import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
 import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
-import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
 
 @SpringBootTest
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, MqttTelemetryAdapterIT.CollectorConfig.class})
 @Testcontainers
 class MqttTelemetryAdapterIT {
 
@@ -64,17 +66,16 @@ class MqttTelemetryAdapterIT {
         registry.add("flexmotion.telemetry.topic-prefix", () -> TOPIC_PREFIX);
     }
 
-    private final TelemetryPort telemetryPort;
-    private final BlockingQueue<TelemetryReading> received = new LinkedBlockingQueue<>();
+    private final TelemetryReadingCollector collector;
 
     @Autowired
-    MqttTelemetryAdapterIT(TelemetryPort telemetryPort) {
-        this.telemetryPort = telemetryPort;
+    MqttTelemetryAdapterIT(TelemetryReadingCollector collector) {
+        this.collector = collector;
     }
 
     @BeforeEach
-    void subscribe() {
-        telemetryPort.subscribe(received::add);
+    void clearReadings() {
+        collector.readings.clear();
     }
 
     @Test
@@ -94,11 +95,12 @@ class MqttTelemetryAdapterIT {
         publish(TelemetryFixtures.read("valid-reading.json"));
 
         assertThat(nextReading().vehicleCode()).isEqualTo(VEHICLE_CODE);
-        assertThat(received).isEmpty();
+        assertThat(collector.readings).isEmpty();
     }
 
     private TelemetryReading nextReading() throws InterruptedException {
-        TelemetryReading reading = received.poll(RECEIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        TelemetryReading reading =
+                collector.readings.poll(RECEIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         assertThat(reading).as("reading delivered by the telemetry port").isNotNull();
         return reading;
     }
@@ -118,5 +120,24 @@ class MqttTelemetryAdapterIT {
 
     private static String brokerUrl() {
         return "tcp://" + RABBITMQ.getHost() + ":" + RABBITMQ.getMappedPort(MQTT_PORT);
+    }
+
+    @TestConfiguration
+    static class CollectorConfig {
+
+        @Bean
+        TelemetryReadingCollector telemetryReadingCollector() {
+            return new TelemetryReadingCollector();
+        }
+    }
+
+    static class TelemetryReadingCollector {
+
+        private final BlockingQueue<TelemetryReading> readings = new LinkedBlockingQueue<>();
+
+        @EventListener
+        void onReading(TelemetryReading reading) {
+            readings.add(reading);
+        }
     }
 }

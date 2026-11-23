@@ -3,6 +3,7 @@ package pt.ua.tqs.flexmotion_cycles.adapters;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.dsl.IntegrationFlow;
@@ -19,8 +20,9 @@ class MqttTelemetryConfig {
     private static final String ANY_VEHICLE = "+";
 
     @Bean
-    MqttTelemetryAdapter mqttTelemetryAdapter(TelemetryMessageParser parser) {
-        return new MqttTelemetryAdapter(parser);
+    MqttTelemetryAdapter mqttTelemetryAdapter(TelemetryMessageParser parser,
+            ApplicationEventPublisher eventPublisher) {
+        return new MqttTelemetryAdapter(parser, eventPublisher);
     }
 
     @Bean
