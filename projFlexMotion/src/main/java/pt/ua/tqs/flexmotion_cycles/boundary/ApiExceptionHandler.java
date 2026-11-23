@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import pt.ua.tqs.flexmotion_cycles.domain.exceptions.InvalidStateTransitionException;
 import pt.ua.tqs.flexmotion_cycles.services.UnlockRefusedException;
 import pt.ua.tqs.flexmotion_cycles.services.VehicleNotFoundException;
 
@@ -43,7 +44,8 @@ public class ApiExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
-    @ExceptionHandler({StationFullException.class, DuplicateVehicleCodeException.class})
+    @ExceptionHandler({StationFullException.class, DuplicateVehicleCodeException.class,
+            InvalidStateTransitionException.class})
     ProblemDetail handleConflict(RuntimeException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
     }

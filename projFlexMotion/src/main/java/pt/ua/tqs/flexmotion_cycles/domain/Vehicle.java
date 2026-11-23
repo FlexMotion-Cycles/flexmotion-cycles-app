@@ -89,6 +89,11 @@ public class Vehicle {
         return VehicleState.valueOf(status.name());
     }
 
+    /** Only {@link VehicleLifecycle} should call this, after checking the transition. */
+    public void setState(VehicleState state) {
+        this.status = VehicleStatus.valueOf(state.name());
+    }
+
     public int getBatteryLevel() {
         return batteryLevel;
     }

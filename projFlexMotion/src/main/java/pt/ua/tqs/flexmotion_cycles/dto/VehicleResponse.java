@@ -12,13 +12,13 @@ public record VehicleResponse(
         VehicleState state,
         Long stationId) {
 
-    /** Maps a vehicle docked at a station to the data the API exposes. */
+    /** Maps a vehicle to the data the API exposes; stationId is null while it is away. */
     public static VehicleResponse from(Vehicle vehicle) {
         return new VehicleResponse(
                 vehicle.getId(),
                 vehicle.getCode(),
                 vehicle.getType(),
                 vehicle.getState(),
-                vehicle.getStation().getId());
+                vehicle.getStation() == null ? null : vehicle.getStation().getId());
     }
 }
