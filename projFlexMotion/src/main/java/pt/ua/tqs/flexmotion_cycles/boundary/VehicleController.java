@@ -11,7 +11,7 @@ import pt.ua.tqs.flexmotion_cycles.boundary.dto.VehicleResponse;
 import pt.ua.tqs.flexmotion_cycles.services.VehicleService;
 
 @RestController 
-@RequestMapping("/api/v1/vehicles")
+@RequestMapping("/api/vehicles")
 public class VehicleController {
     private final VehicleService vehicleService;
 

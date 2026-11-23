@@ -28,7 +28,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 @Import(TestcontainersConfiguration.class)
 @DisplayName("Vehicle REST API (US-04)")
 public class VehicleControllerIT {
-    private static final String BASE_URL = "/api/v1/vehicles/{id}";
+    private static final String BASE_URL = "/api/vehicles/{id}";
     private static final Long UNKNOWN_ID = 999L;
 
     private final MockMvc mockmvc;
