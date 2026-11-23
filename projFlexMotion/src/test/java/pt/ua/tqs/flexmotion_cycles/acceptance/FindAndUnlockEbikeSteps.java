@@ -3,7 +3,6 @@ package pt.ua.tqs.flexmotion_cycles.acceptance;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -70,15 +69,6 @@ public class FindAndUnlockEbikeSteps {
         this.port = port;
         this.username = username;
         this.password = password;
-    }
-
-    @Before
-    public void cleanUp() {
-        tripRepository.deleteAll();
-        maintenanceTicketRepository.deleteAll();
-        vehicleRepository.deleteAll();
-        stationRepository.deleteAll();
-        telemetry.reset();
     }
 
     @Given("a conventional station {string} with capacity {int}")

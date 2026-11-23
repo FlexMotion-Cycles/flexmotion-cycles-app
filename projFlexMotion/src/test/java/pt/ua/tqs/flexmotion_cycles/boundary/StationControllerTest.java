@@ -20,6 +20,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 import pt.ua.tqs.flexmotion_cycles.services.StationAvailability;
 import pt.ua.tqs.flexmotion_cycles.services.StationAvailabilityService;
+import pt.ua.tqs.flexmotion_cycles.services.StationService;
 
 @WebMvcTest(StationController.class)
 @Import(SecurityConfig.class)

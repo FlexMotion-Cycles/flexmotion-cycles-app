@@ -13,7 +13,6 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -46,12 +45,6 @@ public class RegisterStationsAndVehiclesSteps {
         this.mockMvc = mockMvc;
         this.stationRepository = stationRepository;
         this.vehicleRepository = vehicleRepository;
-    }
-
-    @Before
-    public void cleanDatabase() {
-        vehicleRepository.deleteAll();
-        stationRepository.deleteAll();
     }
 
     // Login (JWT) arrives with US-01/US-02; until then the operator is simulated.
