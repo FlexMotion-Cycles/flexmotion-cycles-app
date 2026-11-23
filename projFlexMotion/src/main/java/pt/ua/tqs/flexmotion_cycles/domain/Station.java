@@ -27,19 +27,6 @@ public class Station {
     @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(nullable = false)
-    private double latitude;
-
-    @Column(nullable = false)
-    private double longitude;
-
-    @Column(nullable = false)
-    private int capacity;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private StationType type;
-  
     @Embedded
     private GeoPoint location;
 
@@ -49,7 +36,7 @@ public class Station {
 
     @Column(nullable = false)
     private int dockCapacity;
-  
+
     /** Conventional stations only; null for accessible hubs. */
     private Double overflowRadiusMeters;
 
@@ -66,14 +53,11 @@ public class Station {
         // Required by JPA.
     }
 
-    public Station(String name, double latitude, double longitude, int capacity,
+    /** Station without the type-specific details (used by the FM-27 trip flow and tests). */
+    public Station(String name, double latitude, double longitude, int dockCapacity,
             StationType type) {
-        this.name = name;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.capacity = capacity;
-        this.type = type;
-
+        this(name, new GeoPoint(latitude, longitude), type, dockCapacity);
+    }
 
     private Station(String name, GeoPoint location, StationType type, int dockCapacity) {
         this.name = name;
@@ -108,27 +92,28 @@ public class Station {
         return name;
     }
 
+    public GeoPoint getLocation() {
+        return location;
+    }
+
     public double getLatitude() {
-        return latitude;
+        return location.latitude();
     }
 
     public double getLongitude() {
-        return longitude;
-    }
-
-    public int getCapacity() {
-        return capacity;
+        return location.longitude();
     }
 
     public StationType getType() {
         return type;
     }
-      
-    public GeoPoint getLocation() {
-        return location;
-    }
 
     public int getDockCapacity() {
+        return dockCapacity;
+    }
+
+    /** Same as {@link #getDockCapacity()}; kept for the FM-27 code until both are unified. */
+    public int getCapacity() {
         return dockCapacity;
     }
 
