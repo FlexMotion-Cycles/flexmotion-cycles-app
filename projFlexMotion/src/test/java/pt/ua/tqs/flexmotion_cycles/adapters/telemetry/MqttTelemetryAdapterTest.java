@@ -1,4 +1,4 @@
-package pt.ua.tqs.flexmotion_cycles.adapters;
+package pt.ua.tqs.flexmotion_cycles.adapters.telemetry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;

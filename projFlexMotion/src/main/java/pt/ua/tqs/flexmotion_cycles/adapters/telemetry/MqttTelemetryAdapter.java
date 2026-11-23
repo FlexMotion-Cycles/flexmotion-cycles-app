@@ -1,4 +1,4 @@
-package pt.ua.tqs.flexmotion_cycles.adapters;
+package pt.ua.tqs.flexmotion_cycles.adapters.telemetry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

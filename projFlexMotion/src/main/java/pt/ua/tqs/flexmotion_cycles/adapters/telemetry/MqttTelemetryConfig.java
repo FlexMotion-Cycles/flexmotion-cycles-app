@@ -1,4 +1,4 @@
-package pt.ua.tqs.flexmotion_cycles.adapters;
+package pt.ua.tqs.flexmotion_cycles.adapters.telemetry;
 
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

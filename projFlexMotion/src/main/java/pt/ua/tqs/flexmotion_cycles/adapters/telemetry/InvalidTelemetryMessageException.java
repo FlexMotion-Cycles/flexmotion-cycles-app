@@ -1,4 +1,4 @@
-package pt.ua.tqs.flexmotion_cycles.adapters;
+package pt.ua.tqs.flexmotion_cycles.adapters.telemetry;
 
 public class InvalidTelemetryMessageException extends RuntimeException {
 

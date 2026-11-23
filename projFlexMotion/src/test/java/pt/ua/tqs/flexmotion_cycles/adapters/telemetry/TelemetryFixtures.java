@@ -1,4 +1,4 @@
-package pt.ua.tqs.flexmotion_cycles.adapters;
+package pt.ua.tqs.flexmotion_cycles.adapters.telemetry;
 
 import java.io.IOException;
 import java.io.InputStream;
