@@ -46,4 +46,6 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
      */
     @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
     Optional<Vehicle> findLockedByCode(String code);
+
+    Optional<Vehicle> findByCode(String code);
 }
