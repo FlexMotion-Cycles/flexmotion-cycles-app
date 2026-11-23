@@ -27,8 +27,8 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 /** Steps for US-03. Each scenario gets a new instance, so the fields never leak between them. */
 public class RegisterStationsAndVehiclesSteps {
 
-    private static final String STATIONS_URL = "/api/v1/stations";
-    private static final String VEHICLES_URL = "/api/v1/vehicles";
+    private static final String STATIONS_URL = "/api/stations";
+    private static final String VEHICLES_URL = "/api/vehicles";
     private static final GeoPoint VALE_CLARO_CENTRE = new GeoPoint(40.6405, -8.6538);
     private static final double OVERFLOW_RADIUS_METERS = 10.0;
 

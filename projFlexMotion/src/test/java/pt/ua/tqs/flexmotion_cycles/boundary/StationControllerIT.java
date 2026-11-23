@@ -23,7 +23,7 @@ import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 @Import(TestcontainersConfiguration.class)
 class StationControllerIT {
 
-    private static final String STATIONS_URL = "/api/v1/stations";
+    private static final String STATIONS_URL = "/api/stations";
 
     private static final String CONVENTIONAL_STATION = """
             {

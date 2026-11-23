@@ -14,7 +14,7 @@ import pt.ua.tqs.flexmotion_cycles.services.StationService;
 
 /** REST resource for stations and accessible hubs. */
 @RestController
-@RequestMapping("/api/v1/stations")
+@RequestMapping("/api/stations")
 public class StationController {
 
     private final StationService stationService;

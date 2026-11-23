@@ -27,7 +27,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 @Import(TestcontainersConfiguration.class)
 class VehicleControllerIT {
 
-    private static final String VEHICLES_URL = "/api/v1/vehicles";
+    private static final String VEHICLES_URL = "/api/vehicles";
     private static final GeoPoint VALE_CLARO_CENTRE = new GeoPoint(40.6405, -8.6538);
 
     @Autowired

@@ -14,7 +14,7 @@ import pt.ua.tqs.flexmotion_cycles.services.VehicleService;
 
 /** REST resource for fleet vehicles. */
 @RestController
-@RequestMapping("/api/v1/vehicles")
+@RequestMapping("/api/vehicles")
 public class VehicleController {
 
     private final VehicleService vehicleService;
