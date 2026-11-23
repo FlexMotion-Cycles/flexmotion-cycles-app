@@ -1,5 +1,6 @@
 package pt.ua.tqs.flexmotion_cycles.services;
 
+import java.time.Clock;
 import java.util.Comparator;
 import java.util.Optional;
 
@@ -11,6 +12,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
@@ -26,15 +28,21 @@ public class TelemetryService {
 
     private final VehicleRepository vehicleRepository;
     private final StationRepository stationRepository;
+    private final MaintenanceTicketRepository maintenanceTicketRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
     private final double dockingRadiusMeters;
 
     public TelemetryService(VehicleRepository vehicleRepository,
-            StationRepository stationRepository, ApplicationEventPublisher eventPublisher,
+            StationRepository stationRepository,
+            MaintenanceTicketRepository maintenanceTicketRepository,
+            ApplicationEventPublisher eventPublisher, Clock clock,
             @Value("${flexmotion.telemetry.docking-radius-meters}") double dockingRadiusMeters) {
         this.vehicleRepository = vehicleRepository;
         this.stationRepository = stationRepository;
+        this.maintenanceTicketRepository = maintenanceTicketRepository;
         this.eventPublisher = eventPublisher;
+        this.clock = clock;
         this.dockingRadiusMeters = dockingRadiusMeters;
     }
 
