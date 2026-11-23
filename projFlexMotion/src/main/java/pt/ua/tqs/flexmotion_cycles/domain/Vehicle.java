@@ -151,4 +151,12 @@ public class Vehicle {
         lastTelemetryAt = reading.timestamp();
         return true;
     }
+
+    public void dockAt(Station station) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    public void undock() {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
 }
