@@ -9,8 +9,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +19,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.utility.DockerImageName;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
@@ -35,38 +30,12 @@ import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
 @Import({TestcontainersConfiguration.class, MqttTelemetryAdapterIT.CollectorConfig.class})
 class MqttTelemetryAdapterIT {
 
-    private static final String RABBITMQ_IMAGE = "rabbitmq:4.1-management-alpine";
-    private static final int MQTT_PORT = 1883;
-    private static final String USERNAME = "telemetry-it";
-    private static final String PASSWORD = "telemetry-it";
-    private static final String TOPIC_PREFIX = "flexmotion/telemetry";
-    private static final String COMMAND_TOPIC_PREFIX = "flexmotion/commands";
     private static final String VEHICLE_CODE = "EB-0001";
-    private static final int QOS_AT_LEAST_ONCE = 1;
     private static final long RECEIVE_TIMEOUT_SECONDS = 10;
-
-    static final GenericContainer<?> RABBITMQ =
-            new GenericContainer<>(DockerImageName.parse(RABBITMQ_IMAGE))
-                    .withEnv("RABBITMQ_DEFAULT_USER", USERNAME)
-                    .withEnv("RABBITMQ_DEFAULT_PASS", PASSWORD)
-                    .withEnv("RABBITMQ_ENABLED_PLUGINS", "rabbitmq_mqtt")
-                    .withEnv("RABBITMQ_ENABLED_PLUGINS_FILE", "/var/lib/rabbitmq/enabled_plugins")
-                    .withExposedPorts(MQTT_PORT)
-                    .waitingFor(Wait.forLogMessage(".*Server startup complete.*", 1));
-
-    static {
-        RABBITMQ.start();
-    }
 
     @DynamicPropertySource
     static void telemetryProperties(DynamicPropertyRegistry registry) {
-        registry.add("flexmotion.telemetry.adapter", () -> "mqtt");
-        registry.add("flexmotion.telemetry.broker-url", MqttTelemetryAdapterIT::brokerUrl);
-        registry.add("flexmotion.telemetry.client-id", () -> "flexmotion-backend-it");
-        registry.add("flexmotion.telemetry.username", () -> USERNAME);
-        registry.add("flexmotion.telemetry.password", () -> PASSWORD);
-        registry.add("flexmotion.telemetry.topic-prefix", () -> TOPIC_PREFIX);
-        registry.add("flexmotion.telemetry.command-topic-prefix", () -> COMMAND_TOPIC_PREFIX);
+        MqttTestBroker.registerProperties(registry, "flexmotion-backend-it");
     }
 
     private final TelemetryReadingCollector collector;
@@ -86,7 +55,7 @@ class MqttTelemetryAdapterIT {
     @Test
     @Requirement("FM-26")
     void receivesReadingInTheAgreedFormat() throws Exception {
-        publish(TelemetryFixtures.read("valid-reading.json"));
+        MqttTestBroker.publish(VEHICLE_CODE, TelemetryFixtures.read("valid-reading.json"));
 
         assertThat(nextReading()).isEqualTo(new TelemetryReading(VEHICLE_CODE,
                 Instant.parse("2026-11-22T16:05:00Z"), 19,
@@ -96,8 +65,8 @@ class MqttTelemetryAdapterIT {
     @Test
     @Requirement("FM-26")
     void discardsInvalidMessageAndKeepsConsuming() throws Exception {
-        publish("{not json");
-        publish(TelemetryFixtures.read("valid-reading.json"));
+        MqttTestBroker.publish(VEHICLE_CODE, "{not json");
+        MqttTestBroker.publish(VEHICLE_CODE, TelemetryFixtures.read("valid-reading.json"));
 
         assertThat(nextReading().vehicleCode()).isEqualTo(VEHICLE_CODE);
         assertThat(collector.readings).isEmpty();
@@ -107,8 +76,9 @@ class MqttTelemetryAdapterIT {
     @Requirement("FM-26")
     void sendsUnlockCommandThroughTheBroker() throws Exception {
         BlockingQueue<String> commands = new LinkedBlockingQueue<>();
-        try (MqttClient vehicle = connect("vehicle-it-subscriber")) {
-            vehicle.subscribe(COMMAND_TOPIC_PREFIX + "/" + VEHICLE_CODE, QOS_AT_LEAST_ONCE,
+        try (MqttClient vehicle = MqttTestBroker.connect("vehicle-it-subscriber")) {
+            vehicle.subscribe(MqttTestBroker.COMMAND_TOPIC_PREFIX + "/" + VEHICLE_CODE,
+                    MqttTestBroker.QOS_AT_LEAST_ONCE,
                     (topic, message) -> commands.add(
                             new String(message.getPayload(), StandardCharsets.UTF_8)));
 
@@ -125,27 +95,6 @@ class MqttTelemetryAdapterIT {
                 collector.readings.poll(RECEIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         assertThat(reading).as("reading delivered by the telemetry port").isNotNull();
         return reading;
-    }
-
-    private static void publish(String payload) throws Exception {
-        try (MqttClient client = connect("telemetry-it-publisher")) {
-            client.publish(TOPIC_PREFIX + "/" + VEHICLE_CODE,
-                    payload.getBytes(StandardCharsets.UTF_8), QOS_AT_LEAST_ONCE, false);
-            client.disconnect();
-        }
-    }
-
-    private static MqttClient connect(String clientId) throws Exception {
-        MqttClient client = new MqttClient(brokerUrl(), clientId, new MemoryPersistence());
-        MqttConnectOptions options = new MqttConnectOptions();
-        options.setUserName(USERNAME);
-        options.setPassword(PASSWORD.toCharArray());
-        client.connect(options);
-        return client;
-    }
-
-    private static String brokerUrl() {
-        return "tcp://" + RABBITMQ.getHost() + ":" + RABBITMQ.getMappedPort(MQTT_PORT);
     }
 
     @TestConfiguration
