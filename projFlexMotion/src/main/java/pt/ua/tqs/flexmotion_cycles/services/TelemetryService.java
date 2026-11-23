@@ -16,9 +16,14 @@ import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.MaintenanceTicket;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
+import pt.ua.tqs.flexmotion_cycles.domain.TicketOrigin;
+import pt.ua.tqs.flexmotion_cycles.domain.TicketStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
+import pt.ua.tqs.flexmotion_cycles.domain.VehicleLifecycle;
+import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 
 @Service
@@ -32,6 +37,7 @@ public class TelemetryService {
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final double dockingRadiusMeters;
+    private final VehicleLifecycle lifecycle = new VehicleLifecycle();
 
     public TelemetryService(VehicleRepository vehicleRepository,
             StationRepository stationRepository,
@@ -64,6 +70,23 @@ public class TelemetryService {
         if (wasLocked && !reading.locked()) {
             eventPublisher.publishEvent(new LockOpenedEvent(vehicle.getCode(),
                     reading.timestamp()));
+        }
+        if (reading.faultEvent() != null) {
+            handleFault(vehicle, reading.faultEvent());
+        }
+    }
+
+    private void handleFault(Vehicle vehicle, String faultCode) {
+        if (vehicle.getState() == VehicleState.REMOVED) {
+            return;
+        }
+        if (!maintenanceTicketRepository.existsByVehicleAndOriginAndStatus(
+                vehicle, TicketOrigin.FAULT_EVENT, TicketStatus.OPEN)) {
+            maintenanceTicketRepository.save(
+                    MaintenanceTicket.forFaultEvent(vehicle, faultCode, clock.instant()));
+        }
+        if (vehicle.getState() == VehicleState.AVAILABLE) {
+            lifecycle.apply(vehicle, VehicleState.MAINTENANCE);
         }
     }
 
