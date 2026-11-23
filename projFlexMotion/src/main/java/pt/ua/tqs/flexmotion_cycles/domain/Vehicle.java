@@ -15,7 +15,7 @@ import jakarta.persistence.Version;
 
 /**
  * A fleet vehicle of any {@link VehicleType}. Every new vehicle starts as
- * {@link VehicleState#AVAILABLE}, the initial state of the lifecycle.
+ * {@link VehicleStatus#AVAILABLE}, the initial state of the lifecycle.
  */
 @Entity
 @Table(name = "vehicles")
@@ -25,6 +25,7 @@ public class Vehicle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Identifier shared with the telemetry feed (e.g. "EB-01"). */
     @Column(nullable = false, unique = true)
     private String code;
 
@@ -34,30 +35,37 @@ public class Vehicle {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private VehicleState state;
+    private VehicleStatus status;
+
+    /** Last reported battery level; 0 until the first telemetry reading. */
+    @Column(nullable = false)
+    private int batteryLevel;
 
     /** Station where the vehicle is docked; null while it is away from a station. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id")
     private Station station;
 
-    /**
-     * Optimistic locking: concurrent state changes on the same vehicle fail instead of
-     * overwriting each other.
-     */
+    /** Optimistic locking: concurrent state changes on the same vehicle fail. */
     @Version
     private Long version;
 
-    /** Required by JPA. */
     protected Vehicle() {
+        // Required by JPA.
     }
 
-    /** Creates a new vehicle docked at the given station, in the AVAILABLE state. */
-    public Vehicle(String code, VehicleType type, Station station) {
+    /** A new vehicle starts as AVAILABLE at its station. */
+    public Vehicle(String code, VehicleType type, int batteryLevel, Station station) {
         this.code = code;
         this.type = type;
+        this.batteryLevel = batteryLevel;
         this.station = station;
-        this.state = VehicleState.AVAILABLE;
+        this.status = VehicleStatus.AVAILABLE;
+    }
+
+    /** Registers a new vehicle docked at the given station; its battery is not known yet. */
+    public Vehicle(String code, VehicleType type, Station station) {
+        this(code, type, 0, station);
     }
 
     public Long getId() {
@@ -72,11 +80,33 @@ public class Vehicle {
         return type;
     }
 
+    public VehicleStatus getStatus() {
+        return status;
+    }
+
+    /** Same lifecycle state as {@link #getStatus()}; kept until both enums are unified. */
     public VehicleState getState() {
-        return state;
+        return VehicleState.valueOf(status.name());
+    }
+
+    public int getBatteryLevel() {
+        return batteryLevel;
     }
 
     public Station getStation() {
         return station;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    /** AVAILABLE → IN_USE: the lock opened and the vehicle left its dock. */
+    public void startUse() {
+        if (status != VehicleStatus.AVAILABLE) {
+            throw new IllegalStateException("Vehicle " + code + " is " + status + ", not AVAILABLE");
+        }
+        status = VehicleStatus.IN_USE;
+        station = null;
     }
 }

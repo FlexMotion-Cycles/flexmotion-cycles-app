@@ -24,7 +24,7 @@ public class Station {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
     @Embedded
@@ -49,8 +49,14 @@ public class Station {
     /** Accessible hubs only; null for conventional stations. */
     private LocalTime technicianTo;
 
-    /** Required by JPA. */
     protected Station() {
+        // Required by JPA.
+    }
+
+    /** Station without the type-specific details (used by the FM-27 trip flow and tests). */
+    public Station(String name, double latitude, double longitude, int dockCapacity,
+            StationType type) {
+        this(name, new GeoPoint(latitude, longitude), type, dockCapacity);
     }
 
     private Station(String name, GeoPoint location, StationType type, int dockCapacity) {
@@ -90,11 +96,24 @@ public class Station {
         return location;
     }
 
+    public double getLatitude() {
+        return location.latitude();
+    }
+
+    public double getLongitude() {
+        return location.longitude();
+    }
+
     public StationType getType() {
         return type;
     }
 
     public int getDockCapacity() {
+        return dockCapacity;
+    }
+
+    /** Same as {@link #getDockCapacity()}; kept for the FM-27 code until both are unified. */
+    public int getCapacity() {
         return dockCapacity;
     }
 
