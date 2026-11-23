@@ -30,6 +30,9 @@ class StationControllerTest {
     @MockitoBean
     private StationAvailabilityService stationAvailabilityService;
 
+    @MockitoBean
+    private StationService stationService;
+
     @Autowired
     StationControllerTest(MockMvc mockMvc) {
         this.mockMvc = mockMvc;
