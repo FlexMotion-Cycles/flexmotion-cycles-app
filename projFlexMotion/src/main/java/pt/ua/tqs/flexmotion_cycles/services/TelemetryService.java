@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
+import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
+import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 
 @Service
 public class TelemetryService {
@@ -28,8 +30,16 @@ public class TelemetryService {
     @Transactional
     public void onTelemetry(TelemetryReading reading) {
         vehicleRepository.findByCode(reading.vehicleCode()).ifPresentOrElse(
-                vehicle -> vehicle.applyTelemetry(reading),
+                vehicle -> apply(vehicle, reading),
                 () -> log.warn("Discarded telemetry for unknown vehicle {}",
                         reading.vehicleCode()));
+    }
+
+    private void apply(Vehicle vehicle, TelemetryReading reading) {
+        boolean wasLocked = vehicle.isLocked();
+        if (vehicle.applyTelemetry(reading) && wasLocked && !reading.locked()) {
+            eventPublisher.publishEvent(new LockOpenedEvent(vehicle.getCode(),
+                    reading.timestamp()));
+        }
     }
 }
