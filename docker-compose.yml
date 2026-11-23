@@ -78,6 +78,26 @@ services:
     networks:
       - flexmotion
 
+  fleet-simulator:
+    build:
+      context: ./fleet-simulator
+    restart: unless-stopped
+    environment:
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL}
+      MQTT_USERNAME: ${RABBITMQ_USER}
+      MQTT_PASSWORD: ${RABBITMQ_PASSWORD}
+      MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX}
+      MQTT_COMMAND_TOPIC_PREFIX: ${MQTT_COMMAND_TOPIC_PREFIX:-flexmotion/commands}
+      MQTT_CONTROL_TOPIC_PREFIX: ${MQTT_CONTROL_TOPIC_PREFIX:-flexmotion/simulator}
+      SIMULATOR_TICK_INTERVAL: ${SIMULATOR_TICK_INTERVAL:-5s}
+      SIMULATOR_BATTERY_DRAIN_PER_TICK: ${SIMULATOR_BATTERY_DRAIN_PER_TICK:-1}
+      JAVA_OPTS: ${SIMULATOR_JAVA_OPTS:--Xms64m -Xmx256m}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - flexmotion
+
 volumes:
   postgres-data:
   rabbitmq-data:

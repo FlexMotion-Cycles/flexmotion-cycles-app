@@ -10,6 +10,16 @@ simulator:
   # Simulation speed, not business rules: a vehicle in use loses 1 % every 5 s by default.
   tick-interval: ${SIMULATOR_TICK_INTERVAL:5s}
   battery-drain-per-tick: ${SIMULATOR_BATTERY_DRAIN_PER_TICK:1}
+  # MQTT broker and the topics of the telemetry contract (version 1).
+  mqtt:
+    broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+    username: ${MQTT_USERNAME:}
+    password: ${MQTT_PASSWORD:}
+    client-id: ${MQTT_CLIENT_ID:fleet-simulator}
+    telemetry-topic-prefix: ${MQTT_TOPIC_PREFIX:flexmotion/telemetry}
+    command-topic-prefix: ${MQTT_COMMAND_TOPIC_PREFIX:flexmotion/commands}
+    control-topic-prefix: ${MQTT_CONTROL_TOPIC_PREFIX:flexmotion/simulator}
+  # Synthetic fleet. The codes must match the vehicles registered in the platform (US-03).
   # Synthetic fleet. The codes must match the vehicles registered in the platform (US-03).
   fleet:
     - code: EB-0001

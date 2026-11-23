@@ -81,8 +81,8 @@ Code layout:
   Maven. Base package `pt.ua.tqs.fleet_simulator`, same layering (`domain`, `services`,
   `ports`, `config`; adapters in their own package). It reaches the platform only through
   the MQTT broker.
-- Infrastructure: `docker-compose.yml` (PostgreSQL 18, RabbitMQ 4.1 + MQTT, backend),
-  variables in `.env.example`. CI: `.github/workflows/ci.yml`.
+- Infrastructure: `docker-compose.yml` (PostgreSQL 18, RabbitMQ 4.1 + MQTT, backend,
+  fleet simulator), variables in `.env.example`. CI: `.github/workflows/ci.yml`.
 
 ## 3. Build, run and test commands
 
