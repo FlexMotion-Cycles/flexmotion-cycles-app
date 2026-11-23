@@ -101,3 +101,26 @@ jobs:
       - name: Run fleet simulator tests
         working-directory: fleet-simulator
         run: mvn -B verify
+
+      - name: Import fleet simulator test results into Xray
+        if: always() && github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+        uses: mikepenz/xray-action@v4
+        with:
+          username: ${{ secrets.XRAY_CLIENT_ID }}
+          password: ${{ secrets.XRAY_CLIENT_SECRET }}
+          testFormat: junit
+          testPaths: fleet-simulator/target/TEST-junit-jupiter*.xml
+          projectKey: FM
+          testPlanKey: ${{ vars.XRAY_TEST_PLAN_KEY }}
+
+      # Cucumber scenarios as Generic tests (simple flow); link them to the story once in Xray.
+      - name: Import fleet simulator acceptance results into Xray
+        if: always() && github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+        uses: mikepenz/xray-action@v4
+        with:
+          username: ${{ secrets.XRAY_CLIENT_ID }}
+          password: ${{ secrets.XRAY_CLIENT_SECRET }}
+          testFormat: junit
+          testPaths: fleet-simulator/target/failsafe-reports/TEST-*CucumberIT.xml
+          projectKey: FM
+          testPlanKey: ${{ vars.XRAY_TEST_PLAN_KEY }}
