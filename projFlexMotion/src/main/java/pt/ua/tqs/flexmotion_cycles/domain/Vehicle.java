@@ -15,7 +15,7 @@ import jakarta.persistence.Version;
 
 /**
  * A fleet vehicle of any {@link VehicleType}. Every new vehicle starts as
- * {@link VehicleState#AVAILABLE}, the initial state of the lifecycle.
+ * {@link VehicleStatus#AVAILABLE}, the initial state of the lifecycle.
  */
 @Entity
 @Table(name = "vehicles")
@@ -37,11 +37,9 @@ public class Vehicle {
     @Column(nullable = false)
     private VehicleStatus status;
 
+    /** Last reported battery level; 0 until the first telemetry reading. */
     @Column(nullable = false)
     private int batteryLevel;
-
-    /** Current station; null while the vehicle is in use. */
-    private VehicleState state;
 
     /** Station where the vehicle is docked; null while it is away from a station. */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -63,13 +61,11 @@ public class Vehicle {
         this.batteryLevel = batteryLevel;
         this.station = station;
         this.status = VehicleStatus.AVAILABLE;
+    }
 
-    /** Creates a new vehicle docked at the given station, in the AVAILABLE state. */
+    /** Registers a new vehicle docked at the given station; its battery is not known yet. */
     public Vehicle(String code, VehicleType type, Station station) {
-        this.code = code;
-        this.type = type;
-        this.station = station;
-        this.state = VehicleState.AVAILABLE;
+        this(code, type, 0, station);
     }
 
     public Long getId() {
@@ -88,11 +84,13 @@ public class Vehicle {
         return status;
     }
 
+    /** Same lifecycle state as {@link #getStatus()}; kept until both enums are unified. */
+    public VehicleState getState() {
+        return VehicleState.valueOf(status.name());
+    }
+
     public int getBatteryLevel() {
         return batteryLevel;
-      
-    public VehicleState getState() {
-        return state;
     }
 
     public Station getStation() {
