@@ -30,7 +30,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                 .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/stations/**").permitAll()
-                        .requestMatchers("/api/v1/stations/**", "/api/v1/vehicles/**")
+                        .requestMatchers("/api/stations/**", "/api/vehicles/**")
                                 .hasRole("OPERATOR")
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
