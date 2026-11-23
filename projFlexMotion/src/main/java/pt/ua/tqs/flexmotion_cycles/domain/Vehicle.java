@@ -13,6 +13,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
+/**
+ * A fleet vehicle of any {@link VehicleType}. Every new vehicle starts as
+ * {@link VehicleState#AVAILABLE}, the initial state of the lifecycle.
+ */
 @Entity
 @Table(name = "vehicles")
 public class Vehicle {
@@ -37,13 +41,16 @@ public class Vehicle {
     private int batteryLevel;
 
     /** Current station; null while the vehicle is in use. */
+    private VehicleState state;
+
+    /** Station where the vehicle is docked; null while it is away from a station. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id")
     private Station station;
 
     /** Optimistic locking: concurrent state changes on the same vehicle fail. */
     @Version
-    private long version;
+    private Long version;
 
     protected Vehicle() {
         // Required by JPA.
@@ -56,6 +63,13 @@ public class Vehicle {
         this.batteryLevel = batteryLevel;
         this.station = station;
         this.status = VehicleStatus.AVAILABLE;
+
+    /** Creates a new vehicle docked at the given station, in the AVAILABLE state. */
+    public Vehicle(String code, VehicleType type, Station station) {
+        this.code = code;
+        this.type = type;
+        this.station = station;
+        this.state = VehicleState.AVAILABLE;
     }
 
     public Long getId() {
@@ -76,13 +90,16 @@ public class Vehicle {
 
     public int getBatteryLevel() {
         return batteryLevel;
+      
+    public VehicleState getState() {
+        return state;
     }
 
     public Station getStation() {
         return station;
     }
 
-    public long getVersion() {
+    public Long getVersion() {
         return version;
     }
 

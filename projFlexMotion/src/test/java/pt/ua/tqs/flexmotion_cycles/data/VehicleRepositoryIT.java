@@ -3,6 +3,7 @@ package pt.ua.tqs.flexmotion_cycles.data;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
@@ -21,6 +22,9 @@ import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
+import org.springframework.dao.DataIntegrityViolationException;
+import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 
 @DataJpaTest
@@ -31,11 +35,17 @@ class VehicleRepositoryIT {
     private static final int MIN_BATTERY_LEVEL = 20;
     private static final List<VehicleType> CONVENTIONAL_TYPES =
             List.of(VehicleType.E_BIKE, VehicleType.CARGO_E_BIKE);
+    private static final GeoPoint VALE_CLARO_CENTRE = new GeoPoint(40.6405, -8.6538);
 
-    private final VehicleRepository vehicleRepository;
-    private final TestEntityManager entityManager;
+    @Autowired
+    private VehicleRepository vehicleRepository;
+
+    @Autowired
+    private TestEntityManager entityManager;
 
     private Station central;
+    private Station centralSquare;
+    private Station riverside;
 
     @Autowired
     VehicleRepositoryIT(VehicleRepository vehicleRepository, TestEntityManager entityManager) {
@@ -47,6 +57,57 @@ class VehicleRepositoryIT {
     void setUp() {
         central = entityManager.persist(
                 new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL));
+        centralSquare = entityManager.persist(
+                Station.conventional("Central Square", VALE_CLARO_CENTRE, 20, 10.0));
+        riverside = entityManager.persist(
+                Station.conventional("Riverside", VALE_CLARO_CENTRE, 20, 10.0));
+    }
+  
+    @Test
+    @Requirement("FM-21")
+    void savesNewVehicleAsAvailableAtItsStation() {
+        Vehicle saved = vehicleRepository.save(
+                new Vehicle("EB-0001", VehicleType.E_BIKE, centralSquare));
+        entityManager.flush();
+        entityManager.clear();
+
+        Vehicle found = vehicleRepository.findById(saved.getId()).orElseThrow();
+
+        assertThat(found.getCode()).isEqualTo("EB-0001");
+        assertThat(found.getType()).isEqualTo(VehicleType.E_BIKE);
+        assertThat(found.getState()).isEqualTo(VehicleState.AVAILABLE);
+        assertThat(found.getStation().getId()).isEqualTo(centralSquare.getId());
+    }
+
+    @Test
+    @Requirement("FM-21")
+    void countsOnlyVehiclesDockedAtTheGivenStation() {
+        entityManager.persist(new Vehicle("EB-0001", VehicleType.E_BIKE, centralSquare));
+        entityManager.persist(new Vehicle("EB-0002", VehicleType.E_BIKE, centralSquare));
+        entityManager.persist(new Vehicle("CB-0001", VehicleType.CARGO_E_BIKE, riverside));
+        entityManager.flush();
+
+        assertThat(vehicleRepository.countByStationId(centralSquare.getId())).isEqualTo(2);
+        assertThat(vehicleRepository.countByStationId(riverside.getId())).isEqualTo(1);
+    }
+
+    @Test
+    @Requirement("FM-21")
+    void findsWhetherAVehicleCodeIsAlreadyRegistered() {
+        entityManager.persistAndFlush(new Vehicle("EB-0001", VehicleType.E_BIKE, centralSquare));
+
+        assertThat(vehicleRepository.existsByCode("EB-0001")).isTrue();
+        assertThat(vehicleRepository.existsByCode("EB-0002")).isFalse();
+    }
+
+    @Test
+    @Requirement("FM-21")
+    void rejectsTwoVehiclesWithTheSameCode() {
+        vehicleRepository.saveAndFlush(new Vehicle("EB-0001", VehicleType.E_BIKE, centralSquare));
+        Vehicle duplicate = new Vehicle("EB-0001", VehicleType.HANDBIKE, riverside);
+
+        assertThatThrownBy(() -> vehicleRepository.saveAndFlush(duplicate))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

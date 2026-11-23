@@ -14,6 +14,11 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
+    /** Whether a vehicle with this identifier code is already registered. */
+    boolean existsByCode(String code);
+
+    /** Number of vehicles currently docked at the given station. */
+    long countByStationId(Long stationId);
 
     /**
      * AVAILABLE vehicles of the given types, with at least the given battery level
