@@ -1,5 +1,7 @@
 package pt.ua.tqs.flexmotion_cycles.domain;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -113,5 +115,21 @@ public class Vehicle {
         }
         status = VehicleStatus.IN_USE;
         station = null;
+    }
+
+    public boolean isLocked() {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    public GeoPoint getPosition() {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    public Instant getLastTelemetryAt() {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    public boolean applyTelemetry(TelemetryReading reading) {
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 }
