@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: fleet-simulator
+  main:
+    # The simulator talks only through the MQTT broker (US-07): no web server.
+    web-application-type: none
+    keep-alive: true
+
+simulator:
+  # Simulation speed, not business rules: a vehicle in use loses 1 % every 5 s by default.
+  tick-interval: ${SIMULATOR_TICK_INTERVAL:5s}
+  battery-drain-per-tick: ${SIMULATOR_BATTERY_DRAIN_PER_TICK:1}
+  # Synthetic fleet. The codes must match the vehicles registered in the platform (US-03).
+  fleet:
+    - code: EB-0001
+      battery-percent: 100
+      latitude: 40.6405
+      longitude: -8.6538
+    - code: EB-0002
+      battery-percent: 20
+      latitude: 40.6405
+      longitude: -8.6538
+    - code: CB-0001
+      battery-percent: 80
+      latitude: 40.6420
+      longitude: -8.6500
