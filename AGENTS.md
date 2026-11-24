@@ -77,8 +77,12 @@ Code layout:
 - Backend: `projFlexMotion/` — Spring Boot 4, Java 21, Maven wrapper.
   Base package `pt.ua.tqs.flexmotion_cycles`, organised **by technical layer**
   (`boundary`, `services`, `domain`, `data`; ports and adapters get their own packages).
-- Infrastructure: `docker-compose.yml` (PostgreSQL 18, RabbitMQ 4.1 + MQTT, backend),
-  variables in `.env.example`. CI: `.github/workflows/ci.yml`.
+- Fleet simulator: `fleet-simulator/` — separate Spring Boot 4 service (US-07), Java 21,
+  Maven. Base package `pt.ua.tqs.fleet_simulator`, same layering (`domain`, `services`,
+  `ports`, `config`; adapters in their own package). It reaches the platform only through
+  the MQTT broker.
+- Infrastructure: `docker-compose.yml` (PostgreSQL 18, RabbitMQ 4.1 + MQTT, backend,
+  fleet simulator), variables in `.env.example`. CI: `.github/workflows/ci.yml`.
 
 ## 3. Build, run and test commands
 
@@ -87,6 +91,7 @@ cp .env.example .env                 # once, from the repository root
 docker compose up -d --build         # full stack; health: http://localhost:8000/actuator/health
 cd projFlexMotion && ./mvnw test     # unit tests (*Test, Surefire) + JaCoCo report
 cd projFlexMotion && ./mvnw verify   # unit + integration tests (*IT, Failsafe, Testcontainers)
+cd fleet-simulator && mvn verify     # fleet simulator: unit + integration tests + JaCoCo
 ```
 
 Run the relevant tests before declaring any step finished and report the real result.

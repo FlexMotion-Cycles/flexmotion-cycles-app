@@ -1,0 +1,11 @@
+target/
+.idea
+*.iws
+*.iml
+*.ipr
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.vscode/
