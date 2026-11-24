@@ -2,7 +2,11 @@ package pt.ua.tqs.flexmotion_cycles.domain;
 
 import java.util.Objects;
 
+import java.time.Instant;
+
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -47,6 +51,16 @@ public class Vehicle {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id")
     private Station station;
+
+    @Column(nullable = false)
+    private boolean locked = true;
+
+    @Embedded
+    @AttributeOverride(name = "latitude", column = @Column(name = "position_latitude"))
+    @AttributeOverride(name = "longitude", column = @Column(name = "position_longitude"))
+    private GeoPoint position;
+
+    private Instant lastTelemetryAt;
 
     /** Optimistic locking: concurrent state changes on the same vehicle fail. */
     @Version
@@ -125,5 +139,35 @@ public class Vehicle {
         }
         status = VehicleStatus.AVAILABLE;
         this.station = station;
+    }
+    public boolean isLocked() {
+        return locked;
+    }
+
+    public GeoPoint getPosition() {
+        return position;
+    }
+
+    public Instant getLastTelemetryAt() {
+        return lastTelemetryAt;
+    }
+
+    public boolean applyTelemetry(TelemetryReading reading) {
+        if (lastTelemetryAt != null && !reading.timestamp().isAfter(lastTelemetryAt)) {
+            return false;
+        }
+        batteryLevel = reading.batteryPercent();
+        position = reading.position();
+        locked = reading.locked();
+        lastTelemetryAt = reading.timestamp();
+        return true;
+    }
+
+    public void dockAt(Station station) {
+        this.station = station;
+    }
+
+    public void undock() {
+        this.station = null;
     }
 }

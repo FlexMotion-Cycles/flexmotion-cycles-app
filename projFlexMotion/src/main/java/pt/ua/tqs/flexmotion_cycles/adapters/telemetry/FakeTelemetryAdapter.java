@@ -11,11 +11,12 @@ import org.springframework.stereotype.Component;
 
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
 import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
+import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
 
 /**
- * In-memory stand-in for the fleet simulator until the MQTT adapter exists (US-08).
+ * In-memory stand-in for the fleet simulator, for tests and demos without the simulator.
  * With auto-confirm on, every unlock command is answered at once with a lock-opened
  * event; with it off, tests decide when the lock opens.
  */
