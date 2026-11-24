@@ -4,14 +4,15 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
-import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
 import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
+import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
 
@@ -64,5 +65,9 @@ public class FakeTelemetryAdapter implements TelemetryPort {
     /** Forgets the recorded commands, so each test starts clean. */
     public void reset() {
         unlockCommands.clear();
+    }
+
+    public void reportReading(TelemetryReading reading) {
+        eventPublisher.publishEvent(reading);
     }
 }
