@@ -45,6 +45,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.TripNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class TripServiceTest {
@@ -284,6 +285,23 @@ class TripServiceTest {
                 new LockClosedEvent("EB-01", CLOSED_AT, CENTRAL_DOCK)))
                 .doesNotThrowAnyException();
         verify(stationRepository, never()).findByType(any());
+    }
+
+    @Test
+    @Requirement("FM-28")
+    void findTripReturnsTheUsersOwnTrip() {
+        Trip trip = new Trip(USERNAME, new Vehicle("EB-01", VehicleType.E_BIKE, 80, central), NOW);
+        when(tripRepository.findByIdAndUsername(7L, USERNAME)).thenReturn(Optional.of(trip));
+
+        assertThat(service.findTrip(USERNAME, 7L)).isSameAs(trip);
+    }
+
+    @Test
+    @Requirement("FM-28")
+    void tripOfAnotherUserOrUnknownIsNotFound() {
+        when(tripRepository.findByIdAndUsername(7L, USERNAME)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findTrip(USERNAME, 7L)).isInstanceOf(TripNotFoundException.class);
     }
 
     private Vehicle vehicleFound(String code, VehicleType type, int batteryLevel) {

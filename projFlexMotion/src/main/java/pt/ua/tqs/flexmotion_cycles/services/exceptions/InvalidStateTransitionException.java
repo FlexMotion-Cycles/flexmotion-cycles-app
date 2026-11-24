@@ -1,8 +1,9 @@
-package pt.ua.tqs.flexmotion_cycles.domain.exceptions;
+package pt.ua.tqs.flexmotion_cycles.services.exceptions;
 
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 
-public class InvalidStateTransitionException extends DomainException {
+
+public class InvalidStateTransitionException extends RuntimeException {
 
     private final VehicleState from;
     private final VehicleState to;

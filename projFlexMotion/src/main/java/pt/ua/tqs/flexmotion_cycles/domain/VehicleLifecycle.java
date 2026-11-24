@@ -5,7 +5,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
-import pt.ua.tqs.flexmotion_cycles.domain.exceptions.InvalidStateTransitionException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStateTransitionException;
 
 public class VehicleLifecycle {
 

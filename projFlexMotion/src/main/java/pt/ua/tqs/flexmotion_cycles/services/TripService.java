@@ -29,6 +29,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.TripNotFoundException;
 
 @Service
 public class TripService {
@@ -80,6 +81,12 @@ public class TripService {
         Trip trip = tripRepository.save(new Trip(username, vehicle, clock.instant()));
         telemetryPort.sendUnlockCommand(vehicleCode);
         return trip;
+    }
+
+    /** The user's own trip, with its cost once it has ended (US-10). */
+    @Transactional(readOnly = true)
+    public Trip findTrip(String username, Long tripId) {
+        return tripRepository.findByIdAndUsername(tripId, username).orElseThrow(() -> new TripNotFoundException(tripId));
     }
 
     /** Telemetry: the lock opened, so the vehicle is IN_USE and the trip starts (BR7). */

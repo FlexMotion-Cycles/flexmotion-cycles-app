@@ -28,9 +28,9 @@ import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
-import pt.ua.tqs.flexmotion_cycles.domain.exceptions.InvalidStateTransitionException;
 import pt.ua.tqs.flexmotion_cycles.dto.VehicleRequest;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.DuplicateVehicleCodeException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStateTransitionException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.StationFullException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.StationNotFoundException;
 

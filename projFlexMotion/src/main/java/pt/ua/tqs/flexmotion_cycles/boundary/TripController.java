@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pt.ua.tqs.flexmotion_cycles.services.TripService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
 
 @RestController
 @RequestMapping("/api/trips")
@@ -26,4 +29,10 @@ public class TripController {
     public TripDto unlock(@Valid @RequestBody UnlockRequest request, Principal principal) {
         return TripDto.from(tripService.requestUnlock(principal.getName(), request.vehicleCode()));
     }
+
+    @GetMapping("/{id}")
+    public TripDto getTrip(@PathVariable Long id, Principal principal) {
+        return TripDto.from(tripService.findTrip(principal.getName(), id));
+    }
+    
 }
