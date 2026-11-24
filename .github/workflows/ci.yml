@@ -58,6 +58,7 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+          cache-dependency-path: projFlexMotion/pom.xml
 
       - name: Run unit and integration tests
         working-directory: projFlexMotion
