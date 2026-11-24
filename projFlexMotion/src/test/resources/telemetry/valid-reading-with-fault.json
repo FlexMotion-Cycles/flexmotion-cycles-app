@@ -1,0 +1,8 @@
+{
+  "vehicleCode": "EB-0001",
+  "timestamp": "2026-11-22T16:05:00Z",
+  "batteryPercent": 54,
+  "position": { "latitude": 40.6405, "longitude": -8.6538 },
+  "locked": true,
+  "faultEvent": "BRAKE_FAILURE"
+}
