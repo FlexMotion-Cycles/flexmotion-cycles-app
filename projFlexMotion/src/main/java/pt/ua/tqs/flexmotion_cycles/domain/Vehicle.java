@@ -1,5 +1,7 @@
 package pt.ua.tqs.flexmotion_cycles.domain;
 
+import java.util.Objects;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -113,5 +115,15 @@ public class Vehicle {
         }
         status = VehicleStatus.IN_USE;
         station = null;
+    }
+
+    /** IN_USE → AVAILABLE: the lock closed at a dock of the given station (BR9). */
+    public void endUse(Station station) {
+        Objects.requireNonNull(station, "station");
+        if (status != VehicleStatus.IN_USE) {
+            throw new IllegalStateException("Vehicle " + code + " is " + status + ", not IN_USE");
+        }
+        status = VehicleStatus.AVAILABLE;
+        this.station = station;
     }
 }
