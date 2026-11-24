@@ -6,13 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStateTransitionException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import pt.ua.tqs.flexmotion_cycles.domain.exceptions.InvalidStateTransitionException;
 
 @DisplayName("Vehicle lifecycle (US-04)")
 class VehicleLifecycleTest {

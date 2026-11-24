@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+
+import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
 import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
@@ -46,8 +49,12 @@ public class FakeTelemetryAdapter implements TelemetryPort {
         eventPublisher.publishEvent(new LockOpenedEvent(vehicleCode, openedAt));
     }
 
-    public void reportReading(TelemetryReading reading) {
-        eventPublisher.publishEvent(reading);
+    /**
+    * Simulates the telemetry message "lock of this vehicle closed at this time and position".
+    * Never automatic: closing the lock is the rider's action, not the answer to a command.
+    */
+    public void reportLockClosed(String vehicleCode, Instant openedAt, GeoPoint position) {
+        eventPublisher.publishEvent(new LockClosedEvent(vehicleCode, openedAt, position));
     }
 
     public List<String> unlockCommands() {

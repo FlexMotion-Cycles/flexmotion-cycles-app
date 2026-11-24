@@ -10,8 +10,8 @@ import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
-import pt.ua.tqs.flexmotion_cycles.domain.exceptions.InvalidStateTransitionException;
 import pt.ua.tqs.flexmotion_cycles.services.VehicleService;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStateTransitionException;
 
 public class VehicleLifecycleSteps {
     private final VehicleService vehicleService;

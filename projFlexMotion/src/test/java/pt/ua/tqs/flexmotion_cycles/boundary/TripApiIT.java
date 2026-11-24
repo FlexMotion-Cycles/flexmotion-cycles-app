@@ -4,9 +4,16 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
+import static io.restassured.config.JsonConfig.jsonConfig;
+import static org.hamcrest.Matchers.comparesEqualTo;
+
+import java.math.BigDecimal;
+import java.time.Instant;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
+import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import io.restassured.path.json.config.JsonPathConfig;
 import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,6 +104,41 @@ class TripApiIT {
         unlock("EB-02").statusCode(409);
 
         assertThat(telemetry.unlockCommands()).containsExactly("EB-01");
+    }    
+    
+    @Test
+    @Requirement("FM-28")
+    void tripLockedAtADockEndsAndShowsItsCost() {
+        vehicleRepository.save(new Vehicle("EB-01", VehicleType.E_BIKE, 80, central));
+        long tripId = unlock("EB-01").statusCode(202).extract().jsonPath().getLong("id");
+        Instant openedAt = Instant.parse("2026-11-22T10:00:00Z");
+
+        telemetry.reportLockOpened("EB-01", openedAt);
+        telemetry.reportLockClosed("EB-01", openedAt.plusSeconds(61), central.getLocation());
+
+        getTrip(tripId)
+                .statusCode(200)
+                .body("status", equalTo("ENDED"))
+                .body("endStationName", equalTo("Central"))
+                .body("cost.billedMinutes", equalTo(2))
+                .body("cost.total", comparesEqualTo(new BigDecimal("1.30")));
+        assertThat(vehicleRepository.countByStationId(central.getId())).isEqualTo(1);
+    }
+
+    @Test
+    @Requirement("FM-28")
+    void unknownTripReturnsNotFound() {
+        getTrip(999_999L).statusCode(404);
+    }
+
+    
+    private ValidatableResponse getTrip(long tripId) {
+        return given().port(port)
+                .config(RestAssured.config().jsonConfig(
+                        jsonConfig().numberReturnType(JsonPathConfig.NumberReturnType.BIG_DECIMAL)))
+                .auth().preemptive().basic(username, password)
+                .when().get("/api/trips/" + tripId)
+                .then();
     }
 
     private ValidatableResponse unlock(String vehicleCode) {
