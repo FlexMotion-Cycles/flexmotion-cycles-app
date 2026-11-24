@@ -56,9 +56,14 @@ services:
       MQTT_USERNAME: ${RABBITMQ_USER}
       MQTT_PASSWORD: ${RABBITMQ_PASSWORD}
       MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX}
+      MQTT_COMMAND_TOPIC_PREFIX: ${MQTT_COMMAND_TOPIC_PREFIX}
+      TELEMETRY_ADAPTER: ${TELEMETRY_ADAPTER}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       GEOLOCATION_BASE_URL: ${GEOLOCATION_BASE_URL}
       JWT_SECRET: ${JWT_SECRET}
+      SPRING_SECURITY_USER_NAME: ${DEMO_USER_NAME}
+      SPRING_SECURITY_USER_PASSWORD: ${DEMO_USER_PASSWORD}
       JAVA_OPTS: ${JAVA_OPTS}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_PORT}"
@@ -73,6 +78,26 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
+    networks:
+      - flexmotion
+
+  fleet-simulator:
+    build:
+      context: ./fleet-simulator
+    restart: unless-stopped
+    environment:
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL}
+      MQTT_USERNAME: ${RABBITMQ_USER}
+      MQTT_PASSWORD: ${RABBITMQ_PASSWORD}
+      MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX}
+      MQTT_COMMAND_TOPIC_PREFIX: ${MQTT_COMMAND_TOPIC_PREFIX:-flexmotion/commands}
+      MQTT_CONTROL_TOPIC_PREFIX: ${MQTT_CONTROL_TOPIC_PREFIX:-flexmotion/simulator}
+      SIMULATOR_TICK_INTERVAL: ${SIMULATOR_TICK_INTERVAL:-5s}
+      SIMULATOR_BATTERY_DRAIN_PER_TICK: ${SIMULATOR_BATTERY_DRAIN_PER_TICK:-1}
+      JAVA_OPTS: ${SIMULATOR_JAVA_OPTS:--Xms64m -Xmx256m}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     networks:
       - flexmotion
 
