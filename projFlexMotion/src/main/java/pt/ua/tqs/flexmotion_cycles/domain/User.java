@@ -119,4 +119,8 @@ public class User {
     public AccountStatus getStatus() {
         return status;
     }
+
+    public void changeRole(Role newRole) {
+        this.role = newRole;
+    }
 }

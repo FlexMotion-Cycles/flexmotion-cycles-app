@@ -1,5 +1,8 @@
 package pt.ua.tqs.flexmotion_cycles.services;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,7 +16,8 @@ import pt.ua.tqs.flexmotion_cycles.services.exceptions.UserNotFoundException;
 /** Role management by the platform admin (US-02). */
 @Service
 public class UserRoleService {
-
+    private static final Set<Role> ASSIGNABLE_ROLES =
+            EnumSet.of(Role.END_USER, Role.OPERATOR, Role.CLIENT_MANAGER);
     private final UserRepository userRepository;
 
     public UserRoleService(UserRepository userRepository) {
@@ -30,6 +34,21 @@ public class UserRoleService {
      */
     @Transactional
     public User changeRole(String actingEmail, Long userId, Role newRole) {
-        throw new UnsupportedOperationException("Implemented in the next step (TDD)");
+        boolean actingIsAdmin = userRepository.findByEmail(actingEmail)
+                .map(acting -> acting.getRole() == Role.ADMIN)
+                .orElse(false);
+        if (!actingIsAdmin) {
+            throw new RoleChangeNotAllowedException();
+        }
+        if (!ASSIGNABLE_ROLES.contains(newRole)) {
+            throw new RoleNotAssignableException("Role " + newRole + " cannot be assigned");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+        if (user.getRole() == Role.ADMIN) {
+            throw new RoleNotAssignableException("The role of an admin cannot be changed");
+        }
+        user.changeRole(newRole);
+        return userRepository.save(user);
     }
 }
