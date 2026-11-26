@@ -11,9 +11,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
+import pt.ua.tqs.flexmotion_cycles.domain.Role;
+
 /**
- * Access rules of the REST API. Until JWT exists (US-01/US-02), users authenticate with
- * HTTP Basic against the spring.security.user.* account (environment variables).
+ * Access rules of the REST API: each area belongs to one role and any other role gets 403
+ * (US-02). Until US-01 brings stored accounts and JWT, users authenticate with HTTP Basic
+ * against the spring.security.user.* account (environment variables).
  */
 @Configuration
 public class SecurityConfig {
@@ -29,9 +32,13 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                 .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/stations/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/stations/**").hasRole(Role.END_USER.name())
                         .requestMatchers("/api/stations/**", "/api/vehicles/**")
-                                .hasRole("OPERATOR")
+                                .hasRole(Role.OPERATOR.name())
+                        .requestMatchers("/api/trips/**")
+                                .hasRole(Role.END_USER.name())
+                        .requestMatchers("/api/admin/**")
+                                .hasRole(Role.ADMIN.name())
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(errors -> errors

@@ -57,7 +57,7 @@ class TripControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "ines")
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-27")
     void unlockRequestsATripForTheAuthenticatedUser() throws Exception {
         Station central = new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL);
@@ -81,7 +81,7 @@ class TripControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "ines")
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-27")
     void unlockOfUnknownVehicleReturnsNotFound() throws Exception {
         when(tripService.requestUnlock("ines", "XX-99"))
@@ -91,7 +91,7 @@ class TripControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "ines")
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-27")
     void refusedUnlockReturnsConflict() throws Exception {
         when(tripService.requestUnlock("ines", "EB-04"))
@@ -103,7 +103,7 @@ class TripControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "ines")
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-27")
     void concurrentUnlockReturnsConflict() throws Exception {
         when(tripService.requestUnlock("ines", "EB-01"))
@@ -113,7 +113,7 @@ class TripControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "ines")
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-27")
     void blankVehicleCodeIsRejected() throws Exception {
         unlock(" ").andExpect(status().isBadRequest());
@@ -121,8 +121,8 @@ class TripControllerTest {
         verifyNoInteractions(tripService);
     }
 
-        @Test
-    @WithMockUser(username = "ines")
+    @Test
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-28")
     void endedTripShowsWhereItEndedAndItsCostBreakdown() throws Exception {
         when(tripService.findTrip("ines", 7L)).thenReturn(endedTrip());
@@ -141,7 +141,7 @@ class TripControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "ines")
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-28")
     void activeTripHasNoCostYet() throws Exception {
         Trip trip = new Trip("ines", centralEbike(), Instant.parse("2026-11-22T09:59:50Z"));
@@ -156,7 +156,7 @@ class TripControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "ines")
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-28")
     void tripOfAnotherUserOrUnknownReturnsNotFound() throws Exception {
         when(tripService.findTrip("ines", 8L)).thenThrow(new TripNotFoundException(8L));
@@ -175,7 +175,7 @@ class TripControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "ines")
+    @WithMockUser(username = "ines", roles = "END_USER")
     @Requirement("FM-28")
     void nonNumericTripIdIsRejected() throws Exception {
         mockMvc.perform(get("/api/trips/abc")).andExpect(status().isBadRequest());

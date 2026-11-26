@@ -114,7 +114,9 @@ public class FindAndUnlockEbikeSteps {
 
     @When("Inês searches for available e-bikes")
     public void inesSearchesForAvailableEbikes() {
-        response = given().port(port).when().get("/api/stations");
+        response = given().port(port)
+                .auth().preemptive().basic(username, password)
+                .when().get("/api/stations");
     }
 
     @When("Inês unlocks {string}")

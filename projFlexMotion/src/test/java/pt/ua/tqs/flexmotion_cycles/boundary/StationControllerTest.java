@@ -21,6 +21,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 import pt.ua.tqs.flexmotion_cycles.services.StationAvailability;
 import pt.ua.tqs.flexmotion_cycles.services.StationAvailabilityService;
 import pt.ua.tqs.flexmotion_cycles.services.StationService;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 @WebMvcTest(StationController.class)
 @Import(SecurityConfig.class)
@@ -41,13 +42,13 @@ class StationControllerTest {
 
     @Test
     @Requirement("FM-27")
-    void listsStationsWithFreeDocksAndEbikesWithoutAuthentication() throws Exception {
+    void listsStationsWithFreeDocksAndEbikesForEndUser() throws Exception {
         Station central = new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL);
         Vehicle ebike = new Vehicle("EB-01", VehicleType.E_BIKE, 20, central);
         when(stationAvailabilityService.findConventionalStations())
                 .thenReturn(List.of(new StationAvailability(central, 7, List.of(ebike))));
 
-        mockMvc.perform(get("/api/stations"))
+        mockMvc.perform(get("/api/stations").with(user("ines").roles("END_USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Central"))
                 .andExpect(jsonPath("$[0].freeDocks").value(7))
@@ -62,7 +63,7 @@ class StationControllerTest {
         when(stationAvailabilityService.findConventionalStations())
                 .thenReturn(List.of(new StationAvailability(central, 10, List.of())));
 
-        mockMvc.perform(get("/api/stations"))
+            mockMvc.perform(get("/api/stations").with(user("ines").roles("END_USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].availableEbikes").isEmpty());
     }
