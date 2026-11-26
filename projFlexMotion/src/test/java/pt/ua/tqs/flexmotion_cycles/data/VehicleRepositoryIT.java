@@ -1,13 +1,17 @@
 package pt.ua.tqs.flexmotion_cycles.data;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -16,16 +20,19 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+
+import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
+import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
 import pt.ua.tqs.flexmotion_cycles.domain.MaintenanceTicket;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
 import pt.ua.tqs.flexmotion_cycles.domain.TicketOrigin;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
-import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
-import org.springframework.dao.DataIntegrityViolationException;
-import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
+import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 
 @DataJpaTest
@@ -49,7 +56,7 @@ class VehicleRepositoryIT {
     private Station riverside;
 
     @Autowired
-    VehicleRepositoryIT(VehicleRepository vehicleRepository, TestEntityManager entityManager) {
+    public VehicleRepositoryIT(VehicleRepository vehicleRepository, TestEntityManager entityManager) {
         this.vehicleRepository = vehicleRepository;
         this.entityManager = entityManager;
     }
@@ -109,6 +116,54 @@ class VehicleRepositoryIT {
 
         assertThatThrownBy(() -> vehicleRepository.saveAndFlush(duplicate))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @Requirement("FM-22")
+    @DisplayName("A saved vehicle is found with its state")
+    void savedVehicleIsFoundWithItsState() {
+        Vehicle saved = persistNewVehicle();
+        Vehicle found = vehicleRepository.findById(saved.getId()).orElseThrow();
+
+        assertNotNull(found.getId());
+        assertEquals(VehicleState.AVAILABLE, found.getState());
+        assertEquals(0L, found.getVersion());
+    }
+    
+    @Test
+    @Requirement("FM-22")
+    @DisplayName("A state change is persisted and increments the version")
+    void stateChangeIsPersistedAndIncrementsVersion() {
+        Vehicle saved = persistNewVehicle();
+        Vehicle found = vehicleRepository.findById(saved.getId()).orElseThrow();
+
+        found.setState(VehicleState.MAINTENANCE);
+        vehicleRepository.saveAndFlush(found);
+        entityManager.clear();
+
+        Vehicle reloaded = vehicleRepository.findById(found.getId()).orElseThrow();
+        
+        assertEquals(VehicleState.MAINTENANCE, reloaded.getState());
+        assertTrue(reloaded.getVersion() > 0L);
+    }
+
+    @Test
+    @Requirement("FM-22")
+    @DisplayName("A concurrent state change on a stale copy is rejected (optimistic locking)")
+    void concurrentStateChangeIsRejected() {
+        Long id = persistNewVehicle().getId();
+
+        Vehicle vehicle = vehicleRepository.findById(id).orElseThrow();
+        entityManager.detach(vehicle);
+
+        Vehicle currVehicle = vehicleRepository.findById(id).orElseThrow();
+        currVehicle.setState(VehicleState.IN_USE);
+        vehicleRepository.saveAndFlush(currVehicle);
+
+        vehicle.setState(VehicleState.MAINTENANCE);
+
+        assertThrows(ObjectOptimisticLockingFailureException.class, () -> vehicleRepository.saveAndFlush(vehicle));
+        
     }
 
     @Test
@@ -189,5 +244,11 @@ class VehicleRepositoryIT {
                 .stream()
                 .map(Vehicle::getCode)
                 .toList();
+    }
+
+    private Vehicle persistNewVehicle() {
+        Vehicle vehicle = entityManager.persistFlushFind(new Vehicle("EB-001", VehicleType.E_BIKE, null));
+        entityManager.clear();
+        return vehicle;
     }
 }
