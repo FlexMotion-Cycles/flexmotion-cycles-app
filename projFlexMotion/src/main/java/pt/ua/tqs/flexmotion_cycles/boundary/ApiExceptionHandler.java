@@ -12,15 +12,18 @@ import pt.ua.tqs.flexmotion_cycles.services.VehicleNotFoundException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.DuplicateVehicleCodeException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStateTransitionException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStationException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.RoleChangeNotAllowedException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.RoleNotAssignableException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.StationFullException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.StationNotFoundException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.TripNotFoundException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.UserNotFoundException;
 
 /** Maps service exceptions to HTTP status codes (RFC 9457 problem details). */
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-    @ExceptionHandler({VehicleNotFoundException.class, TripNotFoundException.class})
+    @ExceptionHandler({VehicleNotFoundException.class, TripNotFoundException.class, UserNotFoundException.class})
     public ProblemDetail handleNotFound(RuntimeException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
     }
@@ -33,7 +36,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ProblemDetail handleConcurrentChange(OptimisticLockingFailureException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
-                "The vehicle was changed by another request, please try again");
+                "The data was changed by another request, please try again");
     }
   
     @ExceptionHandler(InvalidStationException.class)
@@ -50,5 +53,15 @@ public class ApiExceptionHandler {
             InvalidStateTransitionException.class})
     ProblemDetail handleConflict(RuntimeException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(RoleChangeNotAllowedException.class)
+    ProblemDetail handleRoleChangeNotAllowed(RoleChangeNotAllowedException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
+    }
+
+    @ExceptionHandler(RoleNotAssignableException.class)
+    ProblemDetail handleRoleNotAssignable(RoleNotAssignableException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 }
