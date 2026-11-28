@@ -5,9 +5,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,10 +28,6 @@ import pt.ua.tqs.flexmotion_cycles.services.exceptions.TripNotFoundException;
 
 @Service
 public class TripService {
-
-    /** A user may have only one trip requested or active at a time. */
-    private static final Set<TripStatus> TRIP_IN_PROGRESS =
-            EnumSet.of(TripStatus.UNLOCK_REQUESTED, TripStatus.ACTIVE);
 
     private static final BigDecimal NO_RESERVATION_FEE = BigDecimal.ZERO;
 
@@ -69,7 +63,7 @@ public class TripService {
     public Trip requestUnlock(String username, String vehicleCode) {
         Vehicle vehicle = vehicleRepository.findLockedByCode(vehicleCode)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleCode));
-        if (tripRepository.existsByUsernameAndStatusIn(username, TRIP_IN_PROGRESS)) {
+        if (tripRepository.existsByUsernameAndStatusIn(username, ConventionalUseRules.TRIP_IN_PROGRESS)) {
             throw new UnlockRefusedException("User already has a trip in progress");
         }
         if (!eligibility.isEligible(vehicle)) {
