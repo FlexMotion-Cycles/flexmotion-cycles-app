@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,13 +18,33 @@ class TripTest {
     private static final TripCost COST = new TripCost(new BigDecimal("1.00"), 20, 0, new BigDecimal("3.00"), new BigDecimal("0.00"), new BigDecimal("0.00"), new BigDecimal("4.00"));
 
     private Station north;
+    private Vehicle vehicle;
     private Trip trip;
 
     @BeforeEach
     void setUp() {
         Station central = new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL);
         north = new Station("North", 40.6500, -8.6500, 10, StationType.CONVENTIONAL);
-        trip = new Trip("ines", new Vehicle("EB-01", VehicleType.E_BIKE, 80, central), REQUESTED_AT);
+        vehicle = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
+        trip = new Trip("ines", vehicle, REQUESTED_AT);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void tripFromAReservationIsLinkedToIt() {
+        Reservation reservation = new Reservation("ines", vehicle, REQUESTED_AT.minusSeconds(300),
+                Duration.ofMinutes(15), new BigDecimal("0.50"));
+
+        Trip reservedTrip = new Trip("ines", vehicle, REQUESTED_AT, reservation);
+
+        assertThat(reservedTrip.getReservation()).isSameAs(reservation);
+        assertThat(reservedTrip.getStatus()).isEqualTo(TripStatus.UNLOCK_REQUESTED);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void immediateTripHasNoReservation() {
+        assertThat(trip.getReservation()).isNull();
     }
 
     @Test
