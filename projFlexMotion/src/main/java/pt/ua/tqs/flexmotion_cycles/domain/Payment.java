@@ -62,10 +62,15 @@ public class Payment {
     @JoinColumn(name = "payment_method_id", nullable = false)
     private PaymentMethod paymentMethod;
 
-    /** Trip this payment is for, if any; reservation and booking links come with US-11/US-16. */
+    /** Trip this payment is for, if any; booking links come with US-16. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_id")
     private Trip trip;
+
+    /** Reservation whose fee this payment charges (BR6), if any. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reservation_id")
+    private Reservation reservation;
 
     @Column(nullable = false)
     private Instant createdAt;
@@ -77,6 +82,19 @@ public class Payment {
     /** A payment about to be sent to the gateway; it starts PENDING. */
     public Payment(PaymentType type, BigDecimal amount, PaymentMethod paymentMethod, Trip trip,
             Instant createdAt) {
+        this(type, amount, paymentMethod, createdAt);
+        this.trip = trip;
+    }
+
+    /** The fee of a reservation, about to be sent to the gateway; it starts PENDING. */
+    public Payment(PaymentType type, BigDecimal amount, PaymentMethod paymentMethod,
+            Reservation reservation, Instant createdAt) {
+        this(type, amount, paymentMethod, createdAt);
+        this.reservation = reservation;
+    }
+
+    private Payment(PaymentType type, BigDecimal amount, PaymentMethod paymentMethod,
+            Instant createdAt) {
         this.type = Objects.requireNonNull(type, "type");
         this.amount = Objects.requireNonNull(amount, "amount");
         this.paymentMethod = Objects.requireNonNull(paymentMethod, "paymentMethod");
@@ -84,7 +102,6 @@ public class Payment {
         if (amount.signum() <= 0) {
             throw new IllegalArgumentException("A payment amount must be positive");
         }
-        this.trip = trip;
         this.status = PaymentStatus.PENDING;
     }
 
@@ -155,6 +172,10 @@ public class Payment {
 
     public Trip getTrip() {
         return trip;
+    }
+
+    public Reservation getReservation() {
+        return reservation;
     }
 
     public Instant getCreatedAt() {

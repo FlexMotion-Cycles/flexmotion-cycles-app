@@ -52,4 +52,26 @@ class VehicleTest {
         assertThatThrownBy(() -> vehicle.endUse(null)).isInstanceOf(NullPointerException.class);
         assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.IN_USE);
     }
+
+    @Test
+    @Requirement("FM-29")
+    void reservedVehicleStartsUseAndLeavesItsDock() {
+        vehicle.setState(VehicleState.RESERVED);
+
+        vehicle.startUse();
+
+        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.IN_USE);
+        assertThat(vehicle.getStation()).isNull();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = VehicleState.class, names = {"IN_USE", "MAINTENANCE", "REMOVED"})
+    @Requirement("FM-29")
+    void vehicleThatIsNotAvailableOrReservedCannotStartUse(VehicleState state) {
+        vehicle.setState(state);
+
+        assertThatThrownBy(() -> vehicle.startUse()).isInstanceOf(IllegalStateException.class);
+        assertThat(vehicle.getState()).isEqualTo(state);
+        assertThat(vehicle.getStation()).isSameAs(central);
+    }
 }

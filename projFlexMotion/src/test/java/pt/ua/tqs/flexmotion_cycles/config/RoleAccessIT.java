@@ -46,6 +46,7 @@ class RoleAccessIT {
                 Role.OPERATOR),
         UNLOCK_VEHICLE(HttpMethod.POST, "/api/trips", Role.END_USER),
         VIEW_TRIP(HttpMethod.GET, "/api/trips/" + ANY_ID, Role.END_USER),
+        RESERVE_VEHICLE(HttpMethod.POST, "/api/reservations", Role.END_USER),
         CHANGE_USER_ROLE(HttpMethod.PUT, "/api/admin/users/" + ANY_ID + "/role", Role.ADMIN);
 
         private final HttpMethod method;

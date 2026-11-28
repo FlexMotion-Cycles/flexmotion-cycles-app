@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 /** Prototype: only what FM-27 needs to request an unlock and start a trip. */
@@ -39,6 +40,11 @@ public class Trip {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "start_station_id", nullable = false)
     private Station startStation;
+
+    /** Reservation this trip fulfils (BR6); null for an immediate use. */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reservation_id", unique = true)
+    private Reservation reservation;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -82,10 +88,16 @@ public class Trip {
 
     /** Unlock requested at the vehicle's current station; the trip has not started yet. */
     public Trip(String username, Vehicle vehicle, Instant requestedAt) {
+        this(username, vehicle, requestedAt, null);
+    }
+
+    /** Unlock requested for a reserved vehicle (or without one when {@code reservation} is null). */
+    public Trip(String username, Vehicle vehicle, Instant requestedAt, Reservation reservation) {
         this.username = username;
         this.vehicle = vehicle;
         this.startStation = vehicle.getStation();
         this.requestedAt = requestedAt;
+        this.reservation = reservation;
         this.status = TripStatus.UNLOCK_REQUESTED;
     }
 
@@ -134,6 +146,10 @@ public class Trip {
 
     public Station getStartStation() {
         return startStation;
+    }
+
+    public Reservation getReservation() {
+        return reservation;
     }
 
     public TripStatus getStatus() {

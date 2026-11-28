@@ -28,6 +28,7 @@ import pt.ua.tqs.flexmotion_cycles.adapters.telemetry.FakeTelemetryAdapter;
 import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
 import pt.ua.tqs.flexmotion_cycles.data.PaymentMethodRepository;
 import pt.ua.tqs.flexmotion_cycles.data.PaymentRepository;
+import pt.ua.tqs.flexmotion_cycles.data.ReservationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
@@ -47,6 +48,7 @@ class TripApiIT {
     private final VehicleRepository vehicleRepository;
     private final MaintenanceTicketRepository maintenanceTicketRepository;
     private final TripRepository tripRepository;
+    private final ReservationRepository reservationRepository;
     private final FakeTelemetryAdapter telemetry;
     private final PaymentRepository paymentRepository;
     private final PaymentMethodRepository paymentMethodRepository;
@@ -60,7 +62,8 @@ class TripApiIT {
     @Autowired
     TripApiIT(StationRepository stationRepository, VehicleRepository vehicleRepository,
             MaintenanceTicketRepository maintenanceTicketRepository,
-            TripRepository tripRepository, FakeTelemetryAdapter telemetry,
+            TripRepository tripRepository, ReservationRepository reservationRepository,
+            FakeTelemetryAdapter telemetry,
             PaymentRepository paymentRepository, PaymentMethodRepository paymentMethodRepository,
             FakePaymentAdapter payments,
             @Value("${local.server.port}") int port,
@@ -70,6 +73,7 @@ class TripApiIT {
         this.vehicleRepository = vehicleRepository;
         this.maintenanceTicketRepository = maintenanceTicketRepository;
         this.tripRepository = tripRepository;
+        this.reservationRepository = reservationRepository;
         this.telemetry = telemetry;
         this.paymentRepository = paymentRepository;
         this.paymentMethodRepository = paymentMethodRepository;
@@ -84,6 +88,7 @@ class TripApiIT {
         paymentRepository.deleteAll();
         paymentMethodRepository.deleteAll();
         tripRepository.deleteAll();
+        reservationRepository.deleteAll();
         maintenanceTicketRepository.deleteAll();
         vehicleRepository.deleteAll();
         stationRepository.deleteAll();

@@ -122,10 +122,11 @@ public class Vehicle {
         return version;
     }
 
-    /** AVAILABLE → IN_USE: the lock opened and the vehicle left its dock. */
+    /** AVAILABLE or RESERVED → IN_USE: the lock opened and the vehicle left its dock. */
     public void startUse() {
-        if (status != VehicleStatus.AVAILABLE) {
-            throw new IllegalStateException("Vehicle " + code + " is " + status + ", not AVAILABLE");
+        if (status != VehicleStatus.AVAILABLE && status != VehicleStatus.RESERVED) {
+            throw new IllegalStateException(
+                    "Vehicle " + code + " is " + status + ", not AVAILABLE or RESERVED");
         }
         status = VehicleStatus.IN_USE;
         station = null;

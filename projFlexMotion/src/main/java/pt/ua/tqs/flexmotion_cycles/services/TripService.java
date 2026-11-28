@@ -5,28 +5,24 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import pt.ua.tqs.flexmotion_cycles.config.TripProperties;
-import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
 import pt.ua.tqs.flexmotion_cycles.domain.PaymentMethod;
+import pt.ua.tqs.flexmotion_cycles.domain.Reservation;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
-import pt.ua.tqs.flexmotion_cycles.domain.TicketStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Trip;
 import pt.ua.tqs.flexmotion_cycles.domain.TripCost;
 import pt.ua.tqs.flexmotion_cycles.domain.TripStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
-import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
@@ -35,14 +31,11 @@ import pt.ua.tqs.flexmotion_cycles.services.exceptions.TripNotFoundException;
 @Service
 public class TripService {
 
-    /** A user may have only one trip requested or active at a time. */
-    private static final Set<TripStatus> TRIP_IN_PROGRESS =
-            EnumSet.of(TripStatus.UNLOCK_REQUESTED, TripStatus.ACTIVE);
-
     private static final BigDecimal NO_RESERVATION_FEE = BigDecimal.ZERO;
 
     private final VehicleRepository vehicleRepository;
-    private final MaintenanceTicketRepository maintenanceTicketRepository;
+    private final ConventionalVehicleEligibility eligibility;
+    private final ReservationService reservationService;
     private final TripRepository tripRepository;
     private final StationRepository stationRepository;
     private final TelemetryPort telemetryPort;
@@ -52,12 +45,13 @@ public class TripService {
     private final DepositService depositService;
 
     public TripService(VehicleRepository vehicleRepository,
-            MaintenanceTicketRepository maintenanceTicketRepository,
+            ConventionalVehicleEligibility eligibility, ReservationService reservationService,
             TripRepository tripRepository, StationRepository stationRepository,
             TelemetryPort telemetryPort, TripCostCalculator costCalculator,
             TripProperties tripProperties, Clock clock, DepositService depositService) {
         this.vehicleRepository = vehicleRepository;
-        this.maintenanceTicketRepository = maintenanceTicketRepository;
+        this.eligibility = eligibility;
+        this.reservationService = reservationService;
         this.tripRepository = tripRepository;
         this.stationRepository = stationRepository;
         this.telemetryPort = telemetryPort;
@@ -68,23 +62,25 @@ public class TripService {
     }
 
     /**
-     * Unlock without a reservation (immediate use): checks the vehicle rules, requires a linked
-     * card (BR2), records the request, authorizes the deposit (BR16) and only then sends the
-     * unlock command, so the vehicle never opens on a refused trip. The trip only starts when
-     * the lock opens (BR7).
+     * Unlock for immediate use or of the user's reserved vehicle (BR5): checks the vehicle
+     * rules, requires a linked card (BR2), records the request, authorizes the deposit (BR16)
+     * and only then sends the unlock command, so the vehicle never opens on a refused trip.
+     * The trip only starts when the lock opens (BR7).
      */
     @Transactional
     public Trip requestUnlock(String username, String vehicleCode) {
         Vehicle vehicle = vehicleRepository.findLockedByCode(vehicleCode)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleCode));
-        if (tripRepository.existsByUsernameAndStatusIn(username, TRIP_IN_PROGRESS)) {
+        if (tripRepository.existsByUsernameAndStatusIn(username, ConventionalUseRules.TRIP_IN_PROGRESS)) {
             throw new UnlockRefusedException("User already has a trip in progress");
         }
-        if (!isUnlockable(vehicle)) {
+        Instant now = clock.instant();
+        Optional<Reservation> reservation = reservationService.fulfilForUnlock(username, vehicle, now);
+        if (reservation.isEmpty() && !eligibility.isEligible(vehicle)) {
             throw new UnlockRefusedException("Vehicle " + vehicleCode + " cannot be unlocked");
         }
         PaymentMethod card = depositService.requireDefaultCard(username);
-        Trip trip = tripRepository.save(new Trip(username, vehicle, clock.instant()));
+        Trip trip = tripRepository.save(new Trip(username, vehicle, now, reservation.orElse(null)));
         depositService.authorizeDeposit(trip, card);
         telemetryPort.sendUnlockCommand(vehicleCode);
         return trip;
@@ -124,9 +120,15 @@ public class TripService {
 
     /** BR7: time runs from the lock opening until the lock closes, as reported by telemetry. */
     private void endTrip(Trip trip, Station dock, Instant closedAt) {
-        TripCost cost = costCalculator.calculate(Duration.between(trip.getStartedAt(), closedAt), NO_RESERVATION_FEE);
+        TripCost cost = costCalculator.calculate(
+                Duration.between(trip.getStartedAt(), closedAt), reservationFeeOf(trip));
         trip.end(closedAt, dock, cost);
         trip.getVehicle().endUse(dock);
+    }
+
+    /** BR6: a trip that fulfils a reservation adds its fee; an immediate use adds nothing. */
+    private static BigDecimal reservationFeeOf(Trip trip) {
+        return trip.getReservation() == null ? NO_RESERVATION_FEE : trip.getReservation().getFee();
     }
 
     /** BR9: an official dock is a conventional station within the dock radius; closest wins. */
@@ -138,14 +140,5 @@ public class TripService {
 
     private static double distance(Station station, GeoPoint position) {
         return station.getLocation().distanceMetersTo(position);
-    }
-
-    /** BR4 (status, battery, no open ticket), BR19 (conventional only), no pending unlock. */
-    private boolean isUnlockable(Vehicle vehicle) {
-        return vehicle.getStatus() == VehicleStatus.AVAILABLE
-                && vehicle.getBatteryLevel() >= ConventionalUseRules.MIN_BATTERY_LEVEL
-                && ConventionalUseRules.CONVENTIONAL_TYPES.contains(vehicle.getType())
-                && !maintenanceTicketRepository.existsByVehicleAndStatus(vehicle, TicketStatus.OPEN)
-                && !tripRepository.existsByVehicleAndStatus(vehicle, TripStatus.UNLOCK_REQUESTED);
     }
 }
