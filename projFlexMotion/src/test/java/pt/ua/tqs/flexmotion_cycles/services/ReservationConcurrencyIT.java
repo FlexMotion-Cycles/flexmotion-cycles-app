@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
 import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
+import pt.ua.tqs.flexmotion_cycles.data.PaymentMethodRepository;
+import pt.ua.tqs.flexmotion_cycles.data.PaymentRepository;
 import pt.ua.tqs.flexmotion_cycles.data.ReservationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
@@ -37,6 +39,8 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 class ReservationConcurrencyIT {
 
     private final ReservationService reservationService;
+    private final PaymentRepository paymentRepository;
+    private final PaymentMethodRepository paymentMethodRepository;
     private final ReservationRepository reservationRepository;
     private final TripRepository tripRepository;
     private final MaintenanceTicketRepository maintenanceTicketRepository;
@@ -47,11 +51,14 @@ class ReservationConcurrencyIT {
 
     @Autowired
     ReservationConcurrencyIT(ReservationService reservationService,
+            PaymentRepository paymentRepository, PaymentMethodRepository paymentMethodRepository,
             ReservationRepository reservationRepository, TripRepository tripRepository,
             MaintenanceTicketRepository maintenanceTicketRepository,
             VehicleRepository vehicleRepository,
             StationRepository stationRepository, PlatformTransactionManager transactionManager) {
         this.reservationService = reservationService;
+        this.paymentRepository = paymentRepository;
+        this.paymentMethodRepository = paymentMethodRepository;
         this.reservationRepository = reservationRepository;
         this.tripRepository = tripRepository;
         this.maintenanceTicketRepository = maintenanceTicketRepository;
@@ -65,6 +72,8 @@ class ReservationConcurrencyIT {
     /** The context and database are shared with other ITs: start clean, children first. */
     @BeforeEach
     void setUp() {
+        paymentRepository.deleteAll();
+        paymentMethodRepository.deleteAll();
         tripRepository.deleteAll();
         reservationRepository.deleteAll();
         maintenanceTicketRepository.deleteAll();

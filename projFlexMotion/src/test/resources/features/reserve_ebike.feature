@@ -8,6 +8,7 @@ Feature: Reserve an e-bike
     Given a conventional station "Central" with capacity 10
     And an available "E_BIKE" "EB-01" at "Central" with battery 80%
     And Inês is logged in
+    And Inês has a linked card ending in "4242" that the payment sandbox accepts
     And the time is "2026-11-30T07:45:00Z"
 
   Rule: A reservation holds the e-bike exclusively for one user (BR5)

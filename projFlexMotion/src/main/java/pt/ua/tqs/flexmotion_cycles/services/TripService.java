@@ -15,6 +15,7 @@ import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.PaymentMethod;
 import pt.ua.tqs.flexmotion_cycles.domain.Reservation;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
@@ -41,12 +42,13 @@ public class TripService {
     private final TripCostCalculator costCalculator;
     private final TripProperties tripProperties;
     private final Clock clock;
+    private final DepositService depositService;
 
     public TripService(VehicleRepository vehicleRepository,
             ConventionalVehicleEligibility eligibility, ReservationService reservationService,
             TripRepository tripRepository, StationRepository stationRepository,
             TelemetryPort telemetryPort, TripCostCalculator costCalculator,
-            TripProperties tripProperties, Clock clock) {
+            TripProperties tripProperties, Clock clock, DepositService depositService) {
         this.vehicleRepository = vehicleRepository;
         this.eligibility = eligibility;
         this.reservationService = reservationService;
@@ -56,11 +58,14 @@ public class TripService {
         this.costCalculator = costCalculator;
         this.tripProperties = tripProperties;
         this.clock = clock;
+        this.depositService = depositService;
     }
 
     /**
-     * Unlock for immediate use or of the user's reserved vehicle (BR5): checks the rules, records
-     * the request and sends the unlock command. The trip only starts when the lock opens (BR7).
+     * Unlock for immediate use or of the user's reserved vehicle (BR5): checks the vehicle
+     * rules, requires a linked card (BR2), records the request, authorizes the deposit (BR16)
+     * and only then sends the unlock command, so the vehicle never opens on a refused trip.
+     * The trip only starts when the lock opens (BR7).
      */
     @Transactional
     public Trip requestUnlock(String username, String vehicleCode) {
@@ -74,7 +79,9 @@ public class TripService {
         if (reservation.isEmpty() && !eligibility.isEligible(vehicle)) {
             throw new UnlockRefusedException("Vehicle " + vehicleCode + " cannot be unlocked");
         }
+        PaymentMethod card = depositService.requireDefaultCard(username);
         Trip trip = tripRepository.save(new Trip(username, vehicle, now, reservation.orElse(null)));
+        depositService.authorizeDeposit(trip, card);
         telemetryPort.sendUnlockCommand(vehicleCode);
         return trip;
     }

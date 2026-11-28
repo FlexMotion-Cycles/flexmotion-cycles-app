@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -35,6 +37,7 @@ import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.PaymentMethod;
 import pt.ua.tqs.flexmotion_cycles.domain.Reservation;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
@@ -81,6 +84,9 @@ class TripServiceTest {
 
     @Mock
     private ReservationService reservationService;
+
+    @Mock
+    private DepositService depositService;
 
     private TripService service;
     private Station central;
@@ -341,6 +347,16 @@ class TripServiceTest {
     }
 
     @Test
+    @Requirement("FM-32")
+    void refusesUnlockWithoutALinkedCard() {
+        vehicleFound("EB-01", VehicleType.E_BIKE, 80);
+        when(depositService.requireDefaultCard(USERNAME))
+                .thenThrow(new UnlockRefusedException("No linked payment method"));
+
+        assertRefused("EB-01");
+    }
+
+    @Test
     @Requirement("FM-29")
     void tripFromAReservationAddsItsFeeToTheCost() {
         Vehicle ebike = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
@@ -359,6 +375,51 @@ class TripServiceTest {
         assertThat(trip.getCost().billedMinutes()).isEqualTo(15);
         assertThat(trip.getCost().reservationFee()).isEqualByComparingTo(RESERVATION_FEE);
         assertThat(trip.getCost().total()).isEqualByComparingTo("3.75");
+    }
+
+    @Test
+    @Requirement("FM-32")
+    void aDeclinedDepositRefusesTheUnlockBeforeTheVehicleOpens() {
+        vehicleFound("EB-01", VehicleType.E_BIKE, 80);
+        savedTripsAreReturned();
+        PaymentMethod card = cardLinked();
+        when(depositService.authorizeDeposit(any(Trip.class), eq(card)))
+                .thenThrow(new UnlockRefusedException("Deposit declined"));
+
+        assertThatThrownBy(() -> service.requestUnlock(USERNAME, "EB-01"))
+                .isInstanceOf(UnlockRefusedException.class);
+        verify(telemetryPort, never()).sendUnlockCommand(any());
+    }
+
+    @Test
+    @Requirement("FM-32")
+    void authorizesTheDepositOnTheDefaultCardBeforeSendingTheUnlock() {
+        vehicleFound("EB-01", VehicleType.E_BIKE, 80);
+        savedTripsAreReturned();
+        PaymentMethod card = cardLinked();
+
+        Trip trip = service.requestUnlock(USERNAME, "EB-01");
+
+        InOrder order = inOrder(depositService, tripRepository, telemetryPort);
+        order.verify(depositService).requireDefaultCard(USERNAME);
+        order.verify(tripRepository).save(trip);
+        order.verify(depositService).authorizeDeposit(trip, card);
+        order.verify(telemetryPort).sendUnlockCommand("EB-01");
+    }
+
+    @Test
+    @Requirement("FM-32")
+    void aVehicleThatCannotBeUnlockedIsRefusedBeforeCheckingTheCard() {
+        vehicleFound("EB-04", VehicleType.E_BIKE, 19);
+
+        assertRefused("EB-04");
+        verify(depositService, never()).requireDefaultCard(any());
+    }
+
+    private PaymentMethod cardLinked() {
+        PaymentMethod card = new PaymentMethod(USERNAME, "pm_card_visa", "4242");
+        when(depositService.requireDefaultCard(USERNAME)).thenReturn(card);
+        return card;
     }
 
     private Vehicle vehicleFound(String code, VehicleType type, int batteryLevel) {
@@ -380,7 +441,11 @@ class TripServiceTest {
     }
 
     private TripService serviceWithDockRadius(double dockRadiusMeters) {
-        return new TripService(vehicleRepository, new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository), reservationService, tripRepository, stationRepository, telemetryPort, new TripCostCalculator(PRICING), new TripProperties(dockRadiusMeters), Clock.fixed(NOW, ZoneOffset.UTC));
+        return new TripService(vehicleRepository,
+                new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository),
+                reservationService, tripRepository, stationRepository, telemetryPort,
+                new TripCostCalculator(PRICING), new TripProperties(dockRadiusMeters),
+                Clock.fixed(NOW, ZoneOffset.UTC), depositService);
     }
 
     /** Inês's reservation of the given vehicle, made five minutes before NOW. */

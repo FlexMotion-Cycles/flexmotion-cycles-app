@@ -50,6 +50,7 @@ Feature: Find an e-bike and start a trip
     Scenario: The trip starts when the telemetry reports the lock open
       Given an available "E_BIKE" "EB-01" at "Central" with battery 50%
       And Inês is logged in
+      And Inês has a linked card ending in "4242" that the payment sandbox accepts
       When Inês unlocks "EB-01"
       Then an unlock command is sent for "EB-01"
       And "EB-01" is still "AVAILABLE"
@@ -60,6 +61,7 @@ Feature: Find an e-bike and start a trip
     Scenario Outline: A vehicle that is not eligible cannot be unlocked
       Given <vehicle>
       And Inês is logged in
+      And Inês has a linked card ending in "4242" that the payment sandbox accepts
       When Inês unlocks "<code>"
       Then the unlock is refused
       And no unlock command is sent for "<code>"

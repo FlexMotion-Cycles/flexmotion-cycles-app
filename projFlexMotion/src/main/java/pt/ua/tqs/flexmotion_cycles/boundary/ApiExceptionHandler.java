@@ -9,9 +9,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import pt.ua.tqs.flexmotion_cycles.services.UnlockRefusedException;
 import pt.ua.tqs.flexmotion_cycles.services.VehicleNotFoundException;
 
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.CardDeclinedException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.DuplicateVehicleCodeException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStateTransitionException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStationException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.PaymentGatewayException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationNotFoundException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationRefusedException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.RoleChangeNotAllowedException;
@@ -34,6 +36,20 @@ public class ApiExceptionHandler {
     @ExceptionHandler(UnlockRefusedException.class)
     public ProblemDetail handleUnlockRefused(UnlockRefusedException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    /** The request is valid but the sandbox declined the card (BR2), as Stripe reports it. */
+    @ExceptionHandler(CardDeclinedException.class)
+    public ProblemDetail handleCardDeclined(CardDeclinedException exception) {
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.PAYMENT_REQUIRED, exception.getMessage());
+    }
+
+    /** The payment gateway could not answer; this is not a declined card. */
+    @ExceptionHandler(PaymentGatewayException.class)
+    public ProblemDetail handlePaymentGatewayFailure(PaymentGatewayException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY,
+                "The payment gateway is not available, please try again later");
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)

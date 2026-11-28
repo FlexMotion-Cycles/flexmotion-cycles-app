@@ -16,9 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
+import pt.ua.tqs.flexmotion_cycles.adapters.payment.FakePaymentAdapter;
+import pt.ua.tqs.flexmotion_cycles.data.PaymentMethodRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.PaymentMethod;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
 import pt.ua.tqs.flexmotion_cycles.domain.TelemetryReading;
@@ -41,15 +44,17 @@ class TelemetryUnlockEligibilityIT {
     private final VehicleRepository vehicleRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final TripService tripService;
+    private final PaymentMethodRepository paymentMethodRepository;
 
     @Autowired
     TelemetryUnlockEligibilityIT(StationRepository stationRepository,
             VehicleRepository vehicleRepository, ApplicationEventPublisher eventPublisher,
-            TripService tripService) {
+            TripService tripService, PaymentMethodRepository paymentMethodRepository) {
         this.stationRepository = stationRepository;
         this.vehicleRepository = vehicleRepository;
         this.eventPublisher = eventPublisher;
         this.tripService = tripService;
+        this.paymentMethodRepository = paymentMethodRepository;
     }
 
     @BeforeEach
@@ -59,6 +64,11 @@ class TelemetryUnlockEligibilityIT {
                 StationType.CONVENTIONAL));
         vehicleRepository.save(
                 new Vehicle(VEHICLE_CODE, VehicleType.E_BIKE, INITIAL_BATTERY, station));
+        // BR2: unlocking needs a linked card (FM-32).
+        PaymentMethod card =
+                new PaymentMethod(USERNAME, FakePaymentAdapter.APPROVED_CARD, "4242");
+        card.makeDefault();
+        paymentMethodRepository.save(card);
     }
 
     @Test

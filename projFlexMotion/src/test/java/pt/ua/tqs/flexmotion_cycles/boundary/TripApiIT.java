@@ -23,12 +23,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
+import pt.ua.tqs.flexmotion_cycles.adapters.payment.FakePaymentAdapter;
 import pt.ua.tqs.flexmotion_cycles.adapters.telemetry.FakeTelemetryAdapter;
 import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
+import pt.ua.tqs.flexmotion_cycles.data.PaymentMethodRepository;
+import pt.ua.tqs.flexmotion_cycles.data.PaymentRepository;
 import pt.ua.tqs.flexmotion_cycles.data.ReservationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
+import pt.ua.tqs.flexmotion_cycles.domain.PaymentMethod;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
 import pt.ua.tqs.flexmotion_cycles.domain.TripStatus;
@@ -46,6 +50,9 @@ class TripApiIT {
     private final TripRepository tripRepository;
     private final ReservationRepository reservationRepository;
     private final FakeTelemetryAdapter telemetry;
+    private final PaymentRepository paymentRepository;
+    private final PaymentMethodRepository paymentMethodRepository;
+    private final FakePaymentAdapter payments;
     private final int port;
     private final String username;
     private final String password;
@@ -57,6 +64,8 @@ class TripApiIT {
             MaintenanceTicketRepository maintenanceTicketRepository,
             TripRepository tripRepository, ReservationRepository reservationRepository,
             FakeTelemetryAdapter telemetry,
+            PaymentRepository paymentRepository, PaymentMethodRepository paymentMethodRepository,
+            FakePaymentAdapter payments,
             @Value("${local.server.port}") int port,
             @Value("${spring.security.user.name}") String username,
             @Value("${spring.security.user.password}") String password) {
@@ -66,6 +75,9 @@ class TripApiIT {
         this.tripRepository = tripRepository;
         this.reservationRepository = reservationRepository;
         this.telemetry = telemetry;
+        this.paymentRepository = paymentRepository;
+        this.paymentMethodRepository = paymentMethodRepository;
+        this.payments = payments;
         this.port = port;
         this.username = username;
         this.password = password;
@@ -73,14 +85,18 @@ class TripApiIT {
 
     @BeforeEach
     void setUp() {
+        paymentRepository.deleteAll();
+        paymentMethodRepository.deleteAll();
         tripRepository.deleteAll();
         reservationRepository.deleteAll();
         maintenanceTicketRepository.deleteAll();
         vehicleRepository.deleteAll();
         stationRepository.deleteAll();
         telemetry.reset();
+        payments.reset();
         central = stationRepository.save(
                 new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL));
+        linkDefaultCard();
     }
 
     @Test
@@ -153,5 +169,12 @@ class TripApiIT {
                 .body("{\"vehicleCode\": \"" + vehicleCode + "\"}")
                 .when().post("/api/trips")
                 .then();
+    }
+
+    /** BR2: unlocking needs a linked card, so the test user has one (FM-32). */
+    private void linkDefaultCard() {
+        PaymentMethod card = new PaymentMethod(username, FakePaymentAdapter.APPROVED_CARD, "4242");
+        card.makeDefault();
+        paymentMethodRepository.save(card);
     }
 }
