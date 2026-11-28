@@ -129,10 +129,17 @@ Then:
 5. Propose a plan of small steps and wait for the human's OK.
 
 **Small steps.** Implement one small, reviewable step at a time (one layer, one rule, or one
-test set). After each step stop, explain it, and let the human understand and validate it
-before the next. Prefer test-first (TDD) for business rules.
+test set). Prefer test-first (TDD) for business rules.
 
-**Explain every code change with Before and After.** For each file touched show:
+**Propose first, apply after approval.** Never apply a step and show it afterwards. For each
+step:
+1. **Propose** it without touching any file: the Before and After of every file the step will
+   change (format below), the tests that cover it and the commands that will be run.
+2. **Wait** for the human's approval. If the human asks for changes, propose again.
+3. **Apply** only what was approved, run the tests and report the real result together with
+   the suggested commit message. Then stop before the next step.
+
+**Show every code change with Before and After.** For each file the step changes show:
 
 ````markdown
 **File:** `projFlexMotion/src/main/java/.../BicycleService.java`
