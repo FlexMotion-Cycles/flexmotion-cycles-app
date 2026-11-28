@@ -15,6 +15,7 @@ import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.Reservation;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
 import pt.ua.tqs.flexmotion_cycles.domain.Trip;
@@ -33,6 +34,7 @@ public class TripService {
 
     private final VehicleRepository vehicleRepository;
     private final ConventionalVehicleEligibility eligibility;
+    private final ReservationService reservationService;
     private final TripRepository tripRepository;
     private final StationRepository stationRepository;
     private final TelemetryPort telemetryPort;
@@ -41,12 +43,13 @@ public class TripService {
     private final Clock clock;
 
     public TripService(VehicleRepository vehicleRepository,
-            ConventionalVehicleEligibility eligibility,
+            ConventionalVehicleEligibility eligibility, ReservationService reservationService,
             TripRepository tripRepository, StationRepository stationRepository,
             TelemetryPort telemetryPort, TripCostCalculator costCalculator,
             TripProperties tripProperties, Clock clock) {
         this.vehicleRepository = vehicleRepository;
         this.eligibility = eligibility;
+        this.reservationService = reservationService;
         this.tripRepository = tripRepository;
         this.stationRepository = stationRepository;
         this.telemetryPort = telemetryPort;
@@ -56,8 +59,8 @@ public class TripService {
     }
 
     /**
-     * Unlock without a reservation (immediate use): checks the rules, records the request and
-     * sends the unlock command. The trip only starts when the lock opens (BR7).
+     * Unlock for immediate use or of the user's reserved vehicle (BR5): checks the rules, records
+     * the request and sends the unlock command. The trip only starts when the lock opens (BR7).
      */
     @Transactional
     public Trip requestUnlock(String username, String vehicleCode) {
@@ -66,10 +69,12 @@ public class TripService {
         if (tripRepository.existsByUsernameAndStatusIn(username, ConventionalUseRules.TRIP_IN_PROGRESS)) {
             throw new UnlockRefusedException("User already has a trip in progress");
         }
-        if (!eligibility.isEligible(vehicle)) {
+        Instant now = clock.instant();
+        Optional<Reservation> reservation = reservationService.fulfilForUnlock(username, vehicle, now);
+        if (reservation.isEmpty() && !eligibility.isEligible(vehicle)) {
             throw new UnlockRefusedException("Vehicle " + vehicleCode + " cannot be unlocked");
         }
-        Trip trip = tripRepository.save(new Trip(username, vehicle, clock.instant()));
+        Trip trip = tripRepository.save(new Trip(username, vehicle, now, reservation.orElse(null)));
         telemetryPort.sendUnlockCommand(vehicleCode);
         return trip;
     }
@@ -108,9 +113,15 @@ public class TripService {
 
     /** BR7: time runs from the lock opening until the lock closes, as reported by telemetry. */
     private void endTrip(Trip trip, Station dock, Instant closedAt) {
-        TripCost cost = costCalculator.calculate(Duration.between(trip.getStartedAt(), closedAt), NO_RESERVATION_FEE);
+        TripCost cost = costCalculator.calculate(
+                Duration.between(trip.getStartedAt(), closedAt), reservationFeeOf(trip));
         trip.end(closedAt, dock, cost);
         trip.getVehicle().endUse(dock);
+    }
+
+    /** BR6: a trip that fulfils a reservation adds its fee; an immediate use adds nothing. */
+    private static BigDecimal reservationFeeOf(Trip trip) {
+        return trip.getReservation() == null ? NO_RESERVATION_FEE : trip.getReservation().getFee();
     }
 
     /** BR9: an official dock is a conventional station within the dock radius; closest wins. */

@@ -13,6 +13,7 @@ import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -34,12 +35,14 @@ import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.Reservation;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
 import pt.ua.tqs.flexmotion_cycles.domain.TicketStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Trip;
 import pt.ua.tqs.flexmotion_cycles.domain.TripStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
+import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
@@ -59,6 +62,7 @@ class TripServiceTest {
     private static final GeoPoint CENTRAL_DOCK = new GeoPoint(40.6405, -8.6538);
     private static final GeoPoint NEAR_CENTRAL = new GeoPoint(40.64054, -8.6538);
     private static final GeoPoint OUTSIDE_CENTRAL = new GeoPoint(40.64055, -8.6538);
+    private static final BigDecimal RESERVATION_FEE = new BigDecimal("0.50");
 
     @Mock
     private VehicleRepository vehicleRepository;
@@ -74,6 +78,9 @@ class TripServiceTest {
 
     @Mock 
     private StationRepository stationRepository;
+
+    @Mock
+    private ReservationService reservationService;
 
     private TripService service;
     private Station central;
@@ -304,6 +311,71 @@ class TripServiceTest {
         assertThatThrownBy(() -> service.findTrip(USERNAME, 7L)).isInstanceOf(TripNotFoundException.class);
     }
 
+    @Test
+    @Requirement("FM-29")
+    void unlockOfOwnReservedVehicleLinksTheTripToTheReservation() {
+        Vehicle ebike = vehicleFound("EB-01", VehicleType.E_BIKE, 80);
+        ebike.setState(VehicleState.RESERVED);
+        Reservation reservation = reservationOf(ebike);
+        when(reservationService.fulfilForUnlock(USERNAME, ebike, NOW))
+                .thenReturn(Optional.of(reservation));
+        savedTripsAreReturned();
+
+        Trip trip = service.requestUnlock(USERNAME, "EB-01");
+
+        assertThat(trip.getReservation()).isSameAs(reservation);
+        assertThat(trip.getStatus()).isEqualTo(TripStatus.UNLOCK_REQUESTED);
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
+        verify(telemetryPort).sendUnlockCommand("EB-01");
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void refusesVehicleReservedByAnotherUser() {
+        Vehicle ebike = vehicleFound("EB-01", VehicleType.E_BIKE, 80);
+        ebike.setState(VehicleState.RESERVED);
+        when(reservationService.fulfilForUnlock(USERNAME, ebike, NOW))
+                .thenThrow(new UnlockRefusedException("Vehicle EB-01 is reserved by another user"));
+
+        assertRefused("EB-01");
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void lockOpeningStartsTheTripOfAReservedVehicle() {
+        Vehicle ebike = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
+        ebike.setState(VehicleState.RESERVED);
+        Trip trip = new Trip(USERNAME, ebike, NOW, reservationOf(ebike));
+        when(tripRepository.findByVehicleCodeAndStatus("EB-01", TripStatus.UNLOCK_REQUESTED))
+                .thenReturn(Optional.of(trip));
+
+        service.onLockOpened(new LockOpenedEvent("EB-01", NOW));
+
+        assertThat(trip.getStatus()).isEqualTo(TripStatus.ACTIVE);
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.IN_USE);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void tripFromAReservationAddsItsFeeToTheCost() {
+        Vehicle ebike = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
+        ebike.setState(VehicleState.RESERVED);
+        Instant openedAt = Instant.parse("2026-11-30T07:52:00Z");
+        Instant closedAt = Instant.parse("2026-11-30T08:06:20Z");
+        Trip trip = new Trip(USERNAME, ebike, openedAt, reservationOf(ebike));
+        ebike.startUse();
+        trip.start(openedAt);
+        when(tripRepository.findByVehicleCodeAndStatus("EB-01", TripStatus.ACTIVE))
+                .thenReturn(Optional.of(trip));
+        conventionalStations(central);
+
+        service.onLockClosed(new LockClosedEvent("EB-01", closedAt, CENTRAL_DOCK));
+
+        assertThat(trip.getCost().billedMinutes()).isEqualTo(15);
+        assertThat(trip.getCost().reservationFee()).isEqualByComparingTo(RESERVATION_FEE);
+        assertThat(trip.getCost().total()).isEqualByComparingTo("3.75");
+    }
+
     private Vehicle vehicleFound(String code, VehicleType type, int batteryLevel) {
         Vehicle vehicle = new Vehicle(code, type, batteryLevel, central);
         when(vehicleRepository.findLockedByCode(code)).thenReturn(Optional.of(vehicle));
@@ -323,7 +395,12 @@ class TripServiceTest {
     }
 
     private TripService serviceWithDockRadius(double dockRadiusMeters) {
-        return new TripService(vehicleRepository, new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository), tripRepository, stationRepository, telemetryPort, new TripCostCalculator(PRICING), new TripProperties(dockRadiusMeters), Clock.fixed(NOW, ZoneOffset.UTC));
+        return new TripService(vehicleRepository, new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository), reservationService, tripRepository, stationRepository, telemetryPort, new TripCostCalculator(PRICING), new TripProperties(dockRadiusMeters), Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    /** Inês's reservation of the given vehicle, made five minutes before NOW. */
+    private Reservation reservationOf(Vehicle ebike) {
+        return new Reservation(USERNAME, ebike, NOW.minusSeconds(300), Duration.ofMinutes(15), RESERVATION_FEE);
     }
 
     /** A trip whose lock opened at STARTED_AT, returned as the vehicle's active trip. */

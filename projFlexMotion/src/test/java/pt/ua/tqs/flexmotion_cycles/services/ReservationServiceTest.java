@@ -275,6 +275,86 @@ class ReservationServiceTest {
         assertThat(othersReservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
     }
 
+    @Test
+    @Requirement("FM-29")
+    void ownerUnlockOneSecondBeforeTheHoldEndsFulfilsTheReservation() {
+        Vehicle ebike = reservedVehicle("EB-01");
+        Reservation reservation = holdingReservation(USERNAME, ebike);
+
+        Optional<Reservation> fulfilled = service.fulfilForUnlock(USERNAME, ebike, LAST_SECOND);
+
+        assertThat(fulfilled).containsSame(reservation);
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.FULFILLED);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void ownerUnlockWhenTheHoldEndsExpiresTheReservation() {
+        Vehicle ebike = reservedVehicle("EB-01");
+        Reservation reservation = holdingReservation(USERNAME, ebike);
+
+        Optional<Reservation> fulfilled = service.fulfilForUnlock(USERNAME, ebike, HOLD_ENDS_AT);
+
+        assertThat(fulfilled).isEmpty();
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void unlockByAnotherUserBeforeTheHoldEndsIsRefused() {
+        Vehicle ebike = reservedVehicle("EB-01");
+        Reservation reservation = holdingReservation(OTHER_USER, ebike);
+
+        assertThatThrownBy(() -> service.fulfilForUnlock(USERNAME, ebike, LAST_SECOND))
+                .isInstanceOf(UnlockRefusedException.class);
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void unlockByAnotherUserWhenTheHoldEndsIsNotBlocked() {
+        Vehicle ebike = reservedVehicle("EB-01");
+        Reservation reservation = holdingReservation(OTHER_USER, ebike);
+
+        Optional<Reservation> fulfilled = service.fulfilForUnlock(USERNAME, ebike, HOLD_ENDS_AT);
+
+        assertThat(fulfilled).isEmpty();
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void unlockOfVehicleWithoutReservationReturnsEmpty() {
+        Vehicle ebike = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
+
+        assertThat(service.fulfilForUnlock(USERNAME, ebike, NOW)).isEmpty();
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void ownerUnlockOfReservedVehicleWithOpenTicketIsRefused() {
+        Vehicle ebike = reservedVehicle("EB-01");
+        Reservation reservation = holdingReservation(USERNAME, ebike);
+        when(maintenanceTicketRepository.existsByVehicleAndStatus(ebike, TicketStatus.OPEN))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> service.fulfilForUnlock(USERNAME, ebike, LAST_SECOND))
+                .isInstanceOf(UnlockRefusedException.class);
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
+    }
+
+    /** The given user's ACTIVE reservation, found as the one holding the vehicle. */
+    private Reservation holdingReservation(String username, Vehicle vehicle) {
+        Reservation reservation = reservedBy(username, vehicle);
+        when(reservationRepository.findByVehicleAndStatus(vehicle, ReservationStatus.ACTIVE))
+                .thenReturn(Optional.of(reservation));
+        return reservation;
+    }
+
     private ReservationService serviceAt(Instant now) {
         return new ReservationService(vehicleRepository, reservationRepository, tripRepository,
                 new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository),

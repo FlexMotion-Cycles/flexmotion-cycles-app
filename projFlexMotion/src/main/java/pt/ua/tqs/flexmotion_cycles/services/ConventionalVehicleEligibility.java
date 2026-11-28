@@ -24,8 +24,16 @@ public class ConventionalVehicleEligibility {
 
     /** BR4 (status, battery, no open ticket), BR19 (conventional only), no pending unlock. */
     public boolean isEligible(Vehicle vehicle) {
-        return vehicle.getStatus() == VehicleStatus.AVAILABLE
-                && vehicle.getBatteryLevel() >= ConventionalUseRules.MIN_BATTERY_LEVEL
+        return vehicle.getStatus() == VehicleStatus.AVAILABLE && meetsUseRules(vehicle);
+    }
+
+    /** The same rules for a RESERVED vehicle, unlocked by the owner of its reservation (BR5). */
+    public boolean isEligibleWhenReserved(Vehicle vehicle) {
+        return vehicle.getStatus() == VehicleStatus.RESERVED && meetsUseRules(vehicle);
+    }
+
+    private boolean meetsUseRules(Vehicle vehicle) {
+        return vehicle.getBatteryLevel() >= ConventionalUseRules.MIN_BATTERY_LEVEL
                 && ConventionalUseRules.CONVENTIONAL_TYPES.contains(vehicle.getType())
                 && !maintenanceTicketRepository.existsByVehicleAndStatus(vehicle, TicketStatus.OPEN)
                 && !tripRepository.existsByVehicleAndStatus(vehicle, TripStatus.UNLOCK_REQUESTED);

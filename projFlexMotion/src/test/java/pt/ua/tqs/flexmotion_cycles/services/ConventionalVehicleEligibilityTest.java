@@ -97,4 +97,36 @@ class ConventionalVehicleEligibilityTest {
 
         assertThat(eligibility.isEligible(vehicle)).isFalse();
     }
+
+    @Test
+    @Requirement("FM-29")
+    void reservedVehicleIsEligibleWhenReserved() {
+        Vehicle vehicle = reservedVehicle();
+
+        assertThat(eligibility.isEligibleWhenReserved(vehicle)).isTrue();
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void availableVehicleIsNotEligibleWhenReserved() {
+        Vehicle vehicle = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
+
+        assertThat(eligibility.isEligibleWhenReserved(vehicle)).isFalse();
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void reservedVehicleWithOpenTicketIsNotEligibleWhenReserved() {
+        Vehicle vehicle = reservedVehicle();
+        when(maintenanceTicketRepository.existsByVehicleAndStatus(vehicle, TicketStatus.OPEN))
+                .thenReturn(true);
+
+        assertThat(eligibility.isEligibleWhenReserved(vehicle)).isFalse();
+    }
+
+    private Vehicle reservedVehicle() {
+        Vehicle vehicle = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
+        ReflectionTestUtils.setField(vehicle, "status", VehicleStatus.RESERVED);
+        return vehicle;
+    }
 }

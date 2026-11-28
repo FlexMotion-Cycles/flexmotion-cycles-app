@@ -3,6 +3,7 @@ package pt.ua.tqs.flexmotion_cycles.services;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,6 +93,30 @@ public class ReservationService {
         return reservationRepository.findById(reservationId)
                 .map(reservation -> expireWhenDue(reservation, clock.instant()))
                 .orElse(false);
+    }
+
+    /**
+     * Unlock of a vehicle (BR5). A reservation whose hold has ended is expired first, so the
+     * vehicle is used immediately. The owner's reservation is fulfilled; another user is refused.
+     * Returns the fulfilled reservation, or empty when the vehicle is not reserved.
+     */
+    @Transactional
+    public Optional<Reservation> fulfilForUnlock(String username, Vehicle vehicle, Instant now) {
+        Optional<Reservation> holding = reservationRepository
+                .findByVehicleAndStatus(vehicle, ReservationStatus.ACTIVE)
+                .filter(reservation -> !expireWhenDue(reservation, now));
+        holding.ifPresent(reservation -> {
+            if (!reservation.getUsername().equals(username)) {
+                throw new UnlockRefusedException(
+                        "Vehicle " + vehicle.getCode() + " is reserved by another user");
+            }
+            if (!eligibility.isEligibleWhenReserved(vehicle)) {
+                throw new UnlockRefusedException(
+                        "Vehicle " + vehicle.getCode() + " cannot be unlocked");
+            }
+            reservation.fulfil(now);
+        });
+        return holding;
     }
 
     private boolean expireWhenDue(Reservation reservation, Instant now) {
