@@ -88,14 +88,14 @@ public class Payment {
         this.status = PaymentStatus.PENDING;
     }
 
-    /** The gateway holds the amount without charging it (e.g. the deposit, BR16). */
+    /** The gateway reserved the amount without charging it (e.g. the deposit, BR16). */
     public void markAuthorized(String gatewayRef) {
         String reference = requireText(gatewayRef);
         moveTo(PaymentStatus.AUTHORIZED);
         this.gatewayRef = reference;
     }
 
-    /** The gateway charged the amount, directly or by capturing a hold. */
+    /** The gateway charged the amount, directly or by capturing an authorization. */
     public void markCaptured(String gatewayRef) {
         String reference = requireText(gatewayRef);
         moveTo(PaymentStatus.CAPTURED);

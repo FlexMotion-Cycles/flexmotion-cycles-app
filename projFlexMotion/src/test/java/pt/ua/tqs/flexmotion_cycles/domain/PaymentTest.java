@@ -49,7 +49,7 @@ class PaymentTest {
 
     @Test
     @Requirement("FM-32")
-    void anAcceptedDepositHoldIsAuthorizedWithTheGatewayReference() {
+    void anApprovedDepositAuthorizationKeepsTheGatewayReference() {
         Payment payment = deposit();
 
         payment.markAuthorized("pi_123");
@@ -60,7 +60,7 @@ class PaymentTest {
 
     @Test
     @Requirement("FM-32")
-    void aDeclinedDepositHoldIsDeclined() {
+    void aDeclinedDepositAuthorizationIsDeclined() {
         Payment payment = deposit();
 
         payment.markDeclined();
@@ -70,7 +70,7 @@ class PaymentTest {
 
     @Test
     @Requirement("FM-32")
-    void anAuthorizedHoldCanBeReleasedOrCaptured() {
+    void anAuthorizedPaymentCanBeReleasedOrCaptured() {
         Payment released = deposit();
         released.markAuthorized("pi_1");
         released.markReleased();
