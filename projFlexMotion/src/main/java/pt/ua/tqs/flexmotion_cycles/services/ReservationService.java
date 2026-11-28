@@ -1,6 +1,8 @@
 package pt.ua.tqs.flexmotion_cycles.services;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,19 +49,57 @@ public class ReservationService {
     public Reservation reserve(String username, String vehicleCode) {
         Vehicle vehicle = vehicleRepository.findLockedByCode(vehicleCode)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleCode));
+        Instant now = clock.instant();
+        // Due reservations the expiry job has not reached yet must not block this one (BR5).
+        reservationRepository.findByVehicleAndStatus(vehicle, ReservationStatus.ACTIVE)
+                .ifPresent(reservation -> expireWhenDue(reservation, now));
+        List<Reservation> userReservations =
+                reservationRepository.findByUsernameAndStatus(username, ReservationStatus.ACTIVE);
+        userReservations.forEach(reservation -> expireWhenDue(reservation, now));
+
         if (tripRepository.existsByUsernameAndStatusIn(username,
                 ConventionalUseRules.TRIP_IN_PROGRESS)) {
             throw new ReservationRefusedException("User already has a trip in progress");
         }
-        if (!reservationRepository.findByUsernameAndStatus(username, ReservationStatus.ACTIVE)
-                .isEmpty()) {
+        if (userReservations.stream()
+                .anyMatch(reservation -> reservation.getStatus() == ReservationStatus.ACTIVE)) {
             throw new ReservationRefusedException("User already has an active reservation");
         }
         if (!eligibility.isEligible(vehicle)) {
             throw new ReservationRefusedException("Vehicle " + vehicleCode + " cannot be reserved");
         }
         lifecycle.apply(vehicle, VehicleState.RESERVED);
-        return reservationRepository.save(new Reservation(username, vehicle, clock.instant(),
-                properties.hold(), properties.fee()));
+        return reservationRepository.save(
+                new Reservation(username, vehicle, now, properties.hold(), properties.fee()));
+    }
+
+    /** Ids of the ACTIVE reservations whose hold has ended, for the expiry job (BR5). */
+    @Transactional(readOnly = true)
+    public List<Long> findDueReservationIds() {
+        return reservationRepository
+                .findByStatusAndExpiresAtLessThanEqual(ReservationStatus.ACTIVE, clock.instant())
+                .stream()
+                .map(Reservation::getId)
+                .toList();
+    }
+
+    /**
+     * BR5: expires the reservation if its hold has ended, and the vehicle is AVAILABLE again.
+     * The fee is still due (BR6). Returns false when it is unknown, not ACTIVE or not due yet.
+     */
+    @Transactional
+    public boolean expireIfDue(Long reservationId) {
+        return reservationRepository.findById(reservationId)
+                .map(reservation -> expireWhenDue(reservation, clock.instant()))
+                .orElse(false);
+    }
+
+    private boolean expireWhenDue(Reservation reservation, Instant now) {
+        if (reservation.getStatus() != ReservationStatus.ACTIVE || !reservation.isDueAt(now)) {
+            return false;
+        }
+        reservation.expire(now);
+        lifecycle.apply(reservation.getVehicle(), VehicleState.AVAILABLE);
+        return true;
     }
 }

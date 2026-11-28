@@ -36,6 +36,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
 import pt.ua.tqs.flexmotion_cycles.domain.TicketStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
+import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationRefusedException;
@@ -45,7 +46,9 @@ class ReservationServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-11-30T07:45:00Z");
     private static final Instant HOLD_ENDS_AT = Instant.parse("2026-11-30T08:00:00Z");
+    private static final Instant LAST_SECOND = HOLD_ENDS_AT.minusSeconds(1);
     private static final String USERNAME = "ines";
+    private static final String OTHER_USER = "rui";
     private static final BigDecimal FEE = new BigDecimal("0.50");
     private static final ReservationProperties RESERVATION =
             new ReservationProperties(Duration.ofMinutes(15), FEE);
@@ -67,9 +70,7 @@ class ReservationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ReservationService(vehicleRepository, reservationRepository, tripRepository,
-                new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository),
-                RESERVATION, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = serviceAt(NOW);
         central = new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL);
     }
 
@@ -169,6 +170,134 @@ class ReservationServiceTest {
         assertThatThrownBy(() -> service.reserve(USERNAME, "EB-99"))
                 .isInstanceOf(VehicleNotFoundException.class);
         verify(reservationRepository, never()).save(any());
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void reservationIsNotExpiredOneSecondBeforeTheHoldEnds() {
+        Reservation reservation = activeReservationFound(1L);
+
+        boolean expired = serviceAt(LAST_SECOND).expireIfDue(1L);
+
+        assertThat(expired).isFalse();
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
+        assertThat(reservation.getVehicle().getStatus()).isEqualTo(VehicleStatus.RESERVED);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void reservationExpiresWhenTheHoldEndsAndTheVehicleIsAvailableAgain() {
+        Reservation reservation = activeReservationFound(1L);
+
+        boolean expired = serviceAt(HOLD_ENDS_AT).expireIfDue(1L);
+
+        assertThat(expired).isTrue();
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(reservation.getVehicle().getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void reservationThatIsNoLongerActiveIsNotExpired() {
+        Reservation reservation = activeReservationFound(1L);
+        reservation.fulfil(LAST_SECOND);
+
+        boolean expired = serviceAt(HOLD_ENDS_AT).expireIfDue(1L);
+
+        assertThat(expired).isFalse();
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.FULFILLED);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void unknownReservationIsNotExpired() {
+        when(reservationRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThat(serviceAt(HOLD_ENDS_AT).expireIfDue(99L)).isFalse();
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void dueReservationIdsAreThoseWhoseHoldHasEnded() {
+        Reservation due = reservedBy(OTHER_USER, reservedVehicle("EB-01"));
+        ReflectionTestUtils.setField(due, "id", 7L);
+        when(reservationRepository.findByStatusAndExpiresAtLessThanEqual(
+                ReservationStatus.ACTIVE, HOLD_ENDS_AT)).thenReturn(List.of(due));
+
+        assertThat(serviceAt(HOLD_ENDS_AT).findDueReservationIds()).containsExactly(7L);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void ownDueReservationDoesNotBlockANewOne() {
+        Reservation previous = reservedBy(USERNAME, reservedVehicle("EB-01"));
+        when(reservationRepository.findByUsernameAndStatus(USERNAME, ReservationStatus.ACTIVE))
+                .thenReturn(List.of(previous));
+        Vehicle ebike = vehicleFound("EB-02", VehicleType.E_BIKE, 80);
+        savedReservationsAreReturned();
+
+        Reservation reservation = serviceAt(HOLD_ENDS_AT).reserve(USERNAME, "EB-02");
+
+        assertThat(previous.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(previous.getVehicle().getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+        assertThat(reservation.getVehicle()).isSameAs(ebike);
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void vehicleWithDueReservationOfAnotherUserCanBeReserved() {
+        Vehicle ebike = vehicleFound("EB-01", VehicleType.E_BIKE, 80);
+        ebike.setState(VehicleState.RESERVED);
+        Reservation othersReservation = reservedBy(OTHER_USER, ebike);
+        when(reservationRepository.findByVehicleAndStatus(ebike, ReservationStatus.ACTIVE))
+                .thenReturn(Optional.of(othersReservation));
+        savedReservationsAreReturned();
+
+        Reservation reservation = serviceAt(HOLD_ENDS_AT).reserve(USERNAME, "EB-01");
+
+        assertThat(othersReservation.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(reservation.getUsername()).isEqualTo(USERNAME);
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void vehicleReservedByAnotherUserIsRefusedBeforeTheHoldEnds() {
+        Vehicle ebike = vehicleFound("EB-01", VehicleType.E_BIKE, 80);
+        ebike.setState(VehicleState.RESERVED);
+        Reservation othersReservation = reservedBy(OTHER_USER, ebike);
+        when(reservationRepository.findByVehicleAndStatus(ebike, ReservationStatus.ACTIVE))
+                .thenReturn(Optional.of(othersReservation));
+        service = serviceAt(LAST_SECOND);
+
+        assertRefused("EB-01", ebike, VehicleStatus.RESERVED);
+        assertThat(othersReservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
+    }
+
+    private ReservationService serviceAt(Instant now) {
+        return new ReservationService(vehicleRepository, reservationRepository, tripRepository,
+                new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository),
+                RESERVATION, Clock.fixed(now, ZoneOffset.UTC));
+    }
+
+    /** A vehicle already RESERVED, as it is while its reservation is ACTIVE. */
+    private Vehicle reservedVehicle(String code) {
+        Vehicle vehicle = new Vehicle(code, VehicleType.E_BIKE, 80, central);
+        vehicle.setState(VehicleState.RESERVED);
+        return vehicle;
+    }
+
+    /** An ACTIVE reservation made at NOW, so its hold ends at HOLD_ENDS_AT. */
+    private Reservation reservedBy(String username, Vehicle vehicle) {
+        return new Reservation(username, vehicle, NOW, RESERVATION.hold(), FEE);
+    }
+
+    /** Inês's ACTIVE reservation of EB-01, found by the given id. */
+    private Reservation activeReservationFound(Long id) {
+        Reservation reservation = reservedBy(USERNAME, reservedVehicle("EB-01"));
+        when(reservationRepository.findById(id)).thenReturn(Optional.of(reservation));
+        return reservation;
     }
 
     private Vehicle vehicleFound(String code, VehicleType type, int batteryLevel) {
