@@ -16,6 +16,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.ReservationStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleLifecycle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationNotFoundException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationRefusedException;
 
 /** Reservations of conventional vehicles (US-11). */
@@ -72,6 +73,13 @@ public class ReservationService {
         lifecycle.apply(vehicle, VehicleState.RESERVED);
         return reservationRepository.save(
                 new Reservation(username, vehicle, now, properties.hold(), properties.fee()));
+    }
+
+    /** The user's own reservation; another user's is not found, like an unknown one. */
+    @Transactional(readOnly = true)
+    public Reservation findReservation(String username, Long reservationId) {
+        return reservationRepository.findByIdAndUsername(reservationId, username)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
     }
 
     /** Ids of the ACTIVE reservations whose hold has ended, for the expiry job (BR5). */

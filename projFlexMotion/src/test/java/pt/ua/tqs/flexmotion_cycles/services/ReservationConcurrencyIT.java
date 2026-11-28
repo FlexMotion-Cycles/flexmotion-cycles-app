@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import app.getxray.xray.junit.customjunitxml.annotations.Requirement;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +17,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
+import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
 import pt.ua.tqs.flexmotion_cycles.data.ReservationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
+import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.ReservationStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
@@ -37,6 +38,8 @@ class ReservationConcurrencyIT {
 
     private final ReservationService reservationService;
     private final ReservationRepository reservationRepository;
+    private final TripRepository tripRepository;
+    private final MaintenanceTicketRepository maintenanceTicketRepository;
     private final VehicleRepository vehicleRepository;
     private final StationRepository stationRepository;
     private final TransactionTemplate transaction;
@@ -44,10 +47,14 @@ class ReservationConcurrencyIT {
 
     @Autowired
     ReservationConcurrencyIT(ReservationService reservationService,
-            ReservationRepository reservationRepository, VehicleRepository vehicleRepository,
+            ReservationRepository reservationRepository, TripRepository tripRepository,
+            MaintenanceTicketRepository maintenanceTicketRepository,
+            VehicleRepository vehicleRepository,
             StationRepository stationRepository, PlatformTransactionManager transactionManager) {
         this.reservationService = reservationService;
         this.reservationRepository = reservationRepository;
+        this.tripRepository = tripRepository;
+        this.maintenanceTicketRepository = maintenanceTicketRepository;
         this.vehicleRepository = vehicleRepository;
         this.stationRepository = stationRepository;
         this.transaction = new TransactionTemplate(transactionManager);
@@ -55,19 +62,17 @@ class ReservationConcurrencyIT {
         concurrentTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
+    /** The context and database are shared with other ITs: start clean, children first. */
     @BeforeEach
     void setUp() {
+        tripRepository.deleteAll();
+        reservationRepository.deleteAll();
+        maintenanceTicketRepository.deleteAll();
+        vehicleRepository.deleteAll();
+        stationRepository.deleteAll();
         Station central = stationRepository.save(
                 new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL));
         vehicleRepository.save(new Vehicle("EB-01", VehicleType.E_BIKE, 80, central));
-    }
-
-    /** This test commits, so it must not leave data for the other tests on this database. */
-    @AfterEach
-    void cleanUp() {
-        reservationRepository.deleteAll();
-        vehicleRepository.deleteAll();
-        stationRepository.deleteAll();
     }
 
     @Test

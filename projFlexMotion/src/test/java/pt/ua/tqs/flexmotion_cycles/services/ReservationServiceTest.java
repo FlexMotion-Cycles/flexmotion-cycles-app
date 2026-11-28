@@ -37,6 +37,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationNotFoundException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationRefusedException;
 
 @ExtendWith(MockitoExtension.class)
@@ -286,6 +287,15 @@ class ReservationServiceTest {
         assertThatThrownBy(() -> service.fulfilForUnlock(USERNAME, ebike, LAST_SECOND))
                 .isInstanceOf(UnlockRefusedException.class);
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void reservationOfAnotherUserOrUnknownIsNotFound() {
+        when(reservationRepository.findByIdAndUsername(7L, USERNAME)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findReservation(USERNAME, 7L))
+                .isInstanceOf(ReservationNotFoundException.class);
     }
 
     /** The given user's ACTIVE reservation, found as the one holding the vehicle. */

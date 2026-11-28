@@ -10,7 +10,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 /** Full application with PostgreSQL in a container for the acceptance scenarios. */
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, AcceptanceClockConfiguration.class})
 @ActiveProfiles("it")
 @AutoConfigureMockMvc
 public class CucumberSpringConfiguration {

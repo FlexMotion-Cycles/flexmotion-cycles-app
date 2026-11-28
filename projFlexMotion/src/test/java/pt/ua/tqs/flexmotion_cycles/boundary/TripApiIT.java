@@ -25,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
 import pt.ua.tqs.flexmotion_cycles.adapters.telemetry.FakeTelemetryAdapter;
 import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
+import pt.ua.tqs.flexmotion_cycles.data.ReservationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
@@ -43,6 +44,7 @@ class TripApiIT {
     private final VehicleRepository vehicleRepository;
     private final MaintenanceTicketRepository maintenanceTicketRepository;
     private final TripRepository tripRepository;
+    private final ReservationRepository reservationRepository;
     private final FakeTelemetryAdapter telemetry;
     private final int port;
     private final String username;
@@ -53,7 +55,8 @@ class TripApiIT {
     @Autowired
     TripApiIT(StationRepository stationRepository, VehicleRepository vehicleRepository,
             MaintenanceTicketRepository maintenanceTicketRepository,
-            TripRepository tripRepository, FakeTelemetryAdapter telemetry,
+            TripRepository tripRepository, ReservationRepository reservationRepository,
+            FakeTelemetryAdapter telemetry,
             @Value("${local.server.port}") int port,
             @Value("${spring.security.user.name}") String username,
             @Value("${spring.security.user.password}") String password) {
@@ -61,6 +64,7 @@ class TripApiIT {
         this.vehicleRepository = vehicleRepository;
         this.maintenanceTicketRepository = maintenanceTicketRepository;
         this.tripRepository = tripRepository;
+        this.reservationRepository = reservationRepository;
         this.telemetry = telemetry;
         this.port = port;
         this.username = username;
@@ -70,6 +74,7 @@ class TripApiIT {
     @BeforeEach
     void setUp() {
         tripRepository.deleteAll();
+        reservationRepository.deleteAll();
         maintenanceTicketRepository.deleteAll();
         vehicleRepository.deleteAll();
         stationRepository.deleteAll();
