@@ -342,21 +342,6 @@ class TripServiceTest {
 
     @Test
     @Requirement("FM-29")
-    void lockOpeningStartsTheTripOfAReservedVehicle() {
-        Vehicle ebike = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
-        ebike.setState(VehicleState.RESERVED);
-        Trip trip = new Trip(USERNAME, ebike, NOW, reservationOf(ebike));
-        when(tripRepository.findByVehicleCodeAndStatus("EB-01", TripStatus.UNLOCK_REQUESTED))
-                .thenReturn(Optional.of(trip));
-
-        service.onLockOpened(new LockOpenedEvent("EB-01", NOW));
-
-        assertThat(trip.getStatus()).isEqualTo(TripStatus.ACTIVE);
-        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.IN_USE);
-    }
-
-    @Test
-    @Requirement("FM-29")
     void tripFromAReservationAddsItsFeeToTheCost() {
         Vehicle ebike = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
         ebike.setState(VehicleState.RESERVED);

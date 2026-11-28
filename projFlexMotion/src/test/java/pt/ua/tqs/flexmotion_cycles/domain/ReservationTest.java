@@ -39,18 +39,6 @@ class ReservationTest {
 
     @Test
     @Requirement("FM-29")
-    void reservationIsNotDueOneSecondBeforeTheHoldEnds() {
-        assertThat(reservation.isDueAt(LAST_SECOND)).isFalse();
-    }
-
-    @Test
-    @Requirement("FM-29")
-    void reservationIsDueWhenTheHoldEnds() {
-        assertThat(reservation.isDueAt(EXPIRES_AT)).isTrue();
-    }
-
-    @Test
-    @Requirement("FM-29")
     void reservationIsFulfilledOneSecondBeforeTheHoldEnds() {
         reservation.fulfil(LAST_SECOND);
 

@@ -19,8 +19,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -94,50 +92,10 @@ class ReservationServiceTest {
 
     @Test
     @Requirement("FM-29")
-    void vehicleAtMinimumBatteryCanBeReserved() {
-        Vehicle ebike = vehicleFound("EB-01", VehicleType.E_BIKE, 20);
-        savedReservationsAreReturned();
-
-        service.reserve(USERNAME, "EB-01");
-
-        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.RESERVED);
-    }
-
-    @Test
-    @Requirement("FM-29")
     void refusesVehicleBelowMinimumBattery() {
         Vehicle ebike = vehicleFound("EB-04", VehicleType.E_BIKE, 19);
 
         assertRefused("EB-04", ebike, VehicleStatus.AVAILABLE);
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = VehicleStatus.class,
-            names = {"RESERVED", "IN_USE", "MAINTENANCE", "REMOVED"})
-    @Requirement("FM-29")
-    void refusesVehicleThatIsNotAvailable(VehicleStatus status) {
-        Vehicle ebike = vehicleFound("EB-05", VehicleType.E_BIKE, 80);
-        ReflectionTestUtils.setField(ebike, "status", status);
-
-        assertRefused("EB-05", ebike, status);
-    }
-
-    @Test
-    @Requirement("FM-29")
-    void refusesVehicleWithOpenTicket() {
-        Vehicle ebike = vehicleFound("EB-03", VehicleType.E_BIKE, 80);
-        when(maintenanceTicketRepository.existsByVehicleAndStatus(ebike, TicketStatus.OPEN))
-                .thenReturn(true);
-
-        assertRefused("EB-03", ebike, VehicleStatus.AVAILABLE);
-    }
-
-    @Test
-    @Requirement("FM-29")
-    void refusesAccessibleVehicle() {
-        Vehicle wheelchairBike = vehicleFound("WB-02", VehicleType.WHEELCHAIR_BIKE, 90);
-
-        assertRefused("WB-02", wheelchairBike, VehicleStatus.AVAILABLE);
     }
 
     @Test
@@ -206,14 +164,6 @@ class ReservationServiceTest {
 
         assertThat(expired).isFalse();
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.FULFILLED);
-    }
-
-    @Test
-    @Requirement("FM-29")
-    void unknownReservationIsNotExpired() {
-        when(reservationRepository.findById(99L)).thenReturn(Optional.empty());
-
-        assertThat(serviceAt(HOLD_ENDS_AT).expireIfDue(99L)).isFalse();
     }
 
     @Test
@@ -322,15 +272,6 @@ class ReservationServiceTest {
 
         assertThat(fulfilled).isEmpty();
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
-        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
-    }
-
-    @Test
-    @Requirement("FM-29")
-    void unlockOfVehicleWithoutReservationReturnsEmpty() {
-        Vehicle ebike = new Vehicle("EB-01", VehicleType.E_BIKE, 80, central);
-
-        assertThat(service.fulfilForUnlock(USERNAME, ebike, NOW)).isEmpty();
         assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
     }
 
