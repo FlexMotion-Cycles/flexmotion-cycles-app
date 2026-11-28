@@ -8,6 +8,7 @@ Feature: End a trip and its cost
     Given a conventional station "Central" with capacity 10
     And an available "E_BIKE" "EB-01" at "Central" with battery 50%
     And Inês is logged in
+    And Inês has a linked card ending in "4242" that the payment sandbox accepts
     And Inês unlocks "EB-01"
     And the telemetry reports the lock of "EB-01" open at "2026-11-22T10:00:00Z"
 

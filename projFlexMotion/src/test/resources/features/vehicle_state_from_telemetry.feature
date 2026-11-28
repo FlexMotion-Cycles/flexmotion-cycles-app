@@ -24,6 +24,7 @@ Feature: Vehicle state from telemetry
 
     Scenario Outline: The battery reported by telemetry decides whether the unlock is accepted
       Given Inês is logged in
+      And Inês has a linked card ending in "4242" that the payment sandbox accepts
       When the telemetry reports "EB-01" locked at "Central" with battery <battery>%
       And Inês unlocks "EB-01"
       Then <outcome>
