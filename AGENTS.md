@@ -74,7 +74,7 @@ MAINTENANCE | REMOVED`; `RESERVED → IN_USE | AVAILABLE`; `IN_USE → AVAILABLE
 Invalid transitions are rejected.
 
 Code layout:
-- Backend: `projFlexMotion/` — Spring Boot 4, Java 21, Maven wrapper.
+- Backend: `projFlexMotion/` — Spring Boot 4, Java 21, Maven.
   Base package `pt.ua.tqs.flexmotion_cycles`, organised **by technical layer**
   (`boundary`, `services`, `domain`, `data`; ports and adapters get their own packages).
 - Fleet simulator: `fleet-simulator/` — separate Spring Boot 4 service (US-07), Java 21,
@@ -89,8 +89,8 @@ Code layout:
 ```bash
 cp .env.example .env                 # once, from the repository root
 docker compose up -d --build         # full stack; health: http://localhost:8000/actuator/health
-cd projFlexMotion && ./mvnw test     # unit tests (*Test, Surefire) + JaCoCo report
-cd projFlexMotion && ./mvnw verify   # unit + integration tests (*IT, Failsafe, Testcontainers)
+cd projFlexMotion && mvn test        # unit tests (*Test, Surefire) + JaCoCo report
+cd projFlexMotion && mvn verify      # unit + integration tests (*IT, Failsafe, Testcontainers)
 cd fleet-simulator && mvn verify     # fleet simulator: unit + integration tests + JaCoCo
 ```
 
