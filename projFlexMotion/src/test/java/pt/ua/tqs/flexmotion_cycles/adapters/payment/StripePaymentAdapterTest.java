@@ -96,7 +96,8 @@ class StripePaymentAdapterTest {
                         "customer", "cus_1",
                         "payment_method", "pm_1",
                         "capture_method", "manual",
-                        "confirm", "true")))
+                        "confirm", "true",
+                        "automatic_payment_methods[allow_redirects]", "never")))
                 .andRespond(json("{\"id\": \"pi_1\", \"status\": \"requires_capture\"}"));
 
         PaymentResult result = adapter.authorize("pm_1", DEPOSIT);
@@ -177,6 +178,24 @@ class StripePaymentAdapterTest {
 
         assertThatThrownBy(() -> adapter.authorize("pm_1", DEPOSIT))
                 .isInstanceOf(PaymentGatewayException.class);
+    }
+
+    @Test
+    @Requirement("FM-32")
+    void anInvalidRequestKeepsStripesExplanation() {
+        expectCustomerOf("pm_1");
+        server.expect(requestTo(STRIPE + "/payment_intents"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\": {\"code\": \"parameter_unknown\","
+                                + " \"param\": \"foo\","
+                                + " \"message\": \"Received unknown parameter\"}}"));
+
+        assertThatThrownBy(() -> adapter.authorize("pm_1", DEPOSIT))
+                .isInstanceOf(PaymentGatewayException.class)
+                .hasMessageContaining("400")
+                .hasMessageContaining("parameter_unknown")
+                .hasMessageContaining("foo");
     }
 
     @Test

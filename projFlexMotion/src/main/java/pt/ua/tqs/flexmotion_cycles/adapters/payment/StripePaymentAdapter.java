@@ -102,7 +102,9 @@ public class StripePaymentAdapter implements PaymentPort {
         body.add("currency", currency);
         body.add("customer", customerId);
         body.add("payment_method", gatewayToken);
-        body.add("payment_method_types[]", "card");
+        // Payment methods come from the Dashboard; the user is not present, so no redirects.
+        body.add("automatic_payment_methods[enabled]", "true");
+        body.add("automatic_payment_methods[allow_redirects]", "never");
         body.add("capture_method", captureMethod);
         body.add("confirm", "true");
         body.add("off_session", "true");
@@ -132,14 +134,26 @@ public class StripePaymentAdapter implements PaymentPort {
                     return Optional.empty();
                 }
                 if (response.getStatusCode().isError()) {
-                    throw new PaymentGatewayException(
-                            "Stripe answered " + response.getStatusCode().value());
+                    throw new PaymentGatewayException("Stripe answered "
+                            + response.getStatusCode().value()
+                            + errorDetail(response.bodyTo(JSON_OBJECT)));
                 }
                 return Optional.ofNullable(response.bodyTo(JSON_OBJECT));
             });
         } catch (RestClientException exception) {
             throw new PaymentGatewayException("Stripe could not be reached", exception);
         }
+    }
+
+    /** Stripe's own error code, parameter and message, to tell what was wrong in a request. */
+    @SuppressWarnings("unchecked")
+    private static String errorDetail(Map<String, Object> body) {
+        if (body == null || !(body.get("error") instanceof Map<?, ?>)) {
+            return "";
+        }
+        Map<String, Object> error = (Map<String, Object>) body.get("error");
+        return ": " + error.getOrDefault("code", "") + " " + error.getOrDefault("param", "")
+                + " " + error.getOrDefault("message", "");
     }
 
     private static MultiValueMap<String, String> form(String name, String value) {
