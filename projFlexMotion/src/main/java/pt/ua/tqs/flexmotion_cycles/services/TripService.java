@@ -13,19 +13,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import pt.ua.tqs.flexmotion_cycles.config.TripProperties;
-import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
 import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
-import pt.ua.tqs.flexmotion_cycles.domain.TicketStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Trip;
 import pt.ua.tqs.flexmotion_cycles.domain.TripCost;
 import pt.ua.tqs.flexmotion_cycles.domain.TripStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
-import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.ports.LockClosedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.LockOpenedEvent;
 import pt.ua.tqs.flexmotion_cycles.ports.TelemetryPort;
@@ -41,7 +38,7 @@ public class TripService {
     private static final BigDecimal NO_RESERVATION_FEE = BigDecimal.ZERO;
 
     private final VehicleRepository vehicleRepository;
-    private final MaintenanceTicketRepository maintenanceTicketRepository;
+    private final ConventionalVehicleEligibility eligibility;
     private final TripRepository tripRepository;
     private final StationRepository stationRepository;
     private final TelemetryPort telemetryPort;
@@ -50,12 +47,12 @@ public class TripService {
     private final Clock clock;
 
     public TripService(VehicleRepository vehicleRepository,
-            MaintenanceTicketRepository maintenanceTicketRepository,
+            ConventionalVehicleEligibility eligibility,
             TripRepository tripRepository, StationRepository stationRepository,
             TelemetryPort telemetryPort, TripCostCalculator costCalculator,
             TripProperties tripProperties, Clock clock) {
         this.vehicleRepository = vehicleRepository;
-        this.maintenanceTicketRepository = maintenanceTicketRepository;
+        this.eligibility = eligibility;
         this.tripRepository = tripRepository;
         this.stationRepository = stationRepository;
         this.telemetryPort = telemetryPort;
@@ -75,7 +72,7 @@ public class TripService {
         if (tripRepository.existsByUsernameAndStatusIn(username, TRIP_IN_PROGRESS)) {
             throw new UnlockRefusedException("User already has a trip in progress");
         }
-        if (!isUnlockable(vehicle)) {
+        if (!eligibility.isEligible(vehicle)) {
             throw new UnlockRefusedException("Vehicle " + vehicleCode + " cannot be unlocked");
         }
         Trip trip = tripRepository.save(new Trip(username, vehicle, clock.instant()));
@@ -131,14 +128,5 @@ public class TripService {
 
     private static double distance(Station station, GeoPoint position) {
         return station.getLocation().distanceMetersTo(position);
-    }
-
-    /** BR4 (status, battery, no open ticket), BR19 (conventional only), no pending unlock. */
-    private boolean isUnlockable(Vehicle vehicle) {
-        return vehicle.getStatus() == VehicleStatus.AVAILABLE
-                && vehicle.getBatteryLevel() >= ConventionalUseRules.MIN_BATTERY_LEVEL
-                && ConventionalUseRules.CONVENTIONAL_TYPES.contains(vehicle.getType())
-                && !maintenanceTicketRepository.existsByVehicleAndStatus(vehicle, TicketStatus.OPEN)
-                && !tripRepository.existsByVehicleAndStatus(vehicle, TripStatus.UNLOCK_REQUESTED);
     }
 }

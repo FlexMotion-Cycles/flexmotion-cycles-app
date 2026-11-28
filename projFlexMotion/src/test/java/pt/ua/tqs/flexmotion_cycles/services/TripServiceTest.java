@@ -323,7 +323,7 @@ class TripServiceTest {
     }
 
     private TripService serviceWithDockRadius(double dockRadiusMeters) {
-        return new TripService(vehicleRepository, maintenanceTicketRepository, tripRepository, stationRepository, telemetryPort, new TripCostCalculator(PRICING), new TripProperties(dockRadiusMeters), Clock.fixed(NOW, ZoneOffset.UTC));
+        return new TripService(vehicleRepository, new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository), tripRepository, stationRepository, telemetryPort, new TripCostCalculator(PRICING), new TripProperties(dockRadiusMeters), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     /** A trip whose lock opened at STARTED_AT, returned as the vehicle's active trip. */
