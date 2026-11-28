@@ -26,6 +26,7 @@ import pt.ua.tqs.flexmotion_cycles.config.SecurityConfig;
 import pt.ua.tqs.flexmotion_cycles.domain.PaymentMethod;
 import pt.ua.tqs.flexmotion_cycles.services.PaymentMethodService;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.CardDeclinedException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.PaymentGatewayException;
 
 @WebMvcTest(PaymentMethodController.class)
 @Import(SecurityConfig.class)
@@ -67,6 +68,17 @@ class PaymentMethodControllerTest {
 
         link("{\"cardToken\": \"pm_card_chargeDeclined\"}")
                 .andExpect(status().isPaymentRequired());
+    }
+
+    @Test
+    @WithMockUser(username = "ines", roles = "END_USER")
+    @Requirement("FM-32")
+    void anUnavailableGatewayIsABadGatewayNotADeclinedCard() throws Exception {
+        when(paymentMethodService.link("ines", "pm_card_visa"))
+                .thenThrow(new PaymentGatewayException("Stripe answered 500"));
+
+        link("{\"cardToken\": \"pm_card_visa\"}")
+                .andExpect(status().isBadGateway());
     }
 
     @Test

@@ -13,6 +13,7 @@ import pt.ua.tqs.flexmotion_cycles.services.exceptions.CardDeclinedException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.DuplicateVehicleCodeException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStateTransitionException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStationException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.PaymentGatewayException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.RoleChangeNotAllowedException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.RoleNotAssignableException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.StationFullException;
@@ -39,6 +40,13 @@ public class ApiExceptionHandler {
     public ProblemDetail handleCardDeclined(CardDeclinedException exception) {
         return ProblemDetail.forStatusAndDetail(
                 HttpStatus.PAYMENT_REQUIRED, exception.getMessage());
+    }
+
+    /** The payment gateway could not answer; this is not a declined card. */
+    @ExceptionHandler(PaymentGatewayException.class)
+    public ProblemDetail handlePaymentGatewayFailure(PaymentGatewayException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY,
+                "The payment gateway is not available, please try again later");
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
