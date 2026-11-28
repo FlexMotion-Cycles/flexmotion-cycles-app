@@ -35,7 +35,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/stations/**").hasRole(Role.END_USER.name())
                         .requestMatchers("/api/stations/**", "/api/vehicles/**")
                                 .hasRole(Role.OPERATOR.name())
-                        .requestMatchers("/api/trips/**")
+                        .requestMatchers("/api/trips/**", "/api/payment-methods/**")
                                 .hasRole(Role.END_USER.name())
                         .requestMatchers("/api/admin/**")
                                 .hasRole(Role.ADMIN.name())
