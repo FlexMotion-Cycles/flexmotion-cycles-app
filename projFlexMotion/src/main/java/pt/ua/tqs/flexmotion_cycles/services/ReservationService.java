@@ -27,18 +27,21 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final TripRepository tripRepository;
     private final ConventionalVehicleEligibility eligibility;
+    private final ReservationPaymentService reservationPayments;
     private final ReservationProperties properties;
     private final Clock clock;
     private final VehicleLifecycle lifecycle = new VehicleLifecycle();
 
     public ReservationService(VehicleRepository vehicleRepository,
             ReservationRepository reservationRepository, TripRepository tripRepository,
-            ConventionalVehicleEligibility eligibility, ReservationProperties properties,
+            ConventionalVehicleEligibility eligibility,
+            ReservationPaymentService reservationPayments, ReservationProperties properties,
             Clock clock) {
         this.vehicleRepository = vehicleRepository;
         this.reservationRepository = reservationRepository;
         this.tripRepository = tripRepository;
         this.eligibility = eligibility;
+        this.reservationPayments = reservationPayments;
         this.properties = properties;
         this.clock = clock;
     }
@@ -70,6 +73,7 @@ public class ReservationService {
         if (!eligibility.isEligible(vehicle)) {
             throw new ReservationRefusedException("Vehicle " + vehicleCode + " cannot be reserved");
         }
+        reservationPayments.requireCard(username);
         lifecycle.apply(vehicle, VehicleState.RESERVED);
         return reservationRepository.save(
                 new Reservation(username, vehicle, now, properties.hold(), properties.fee()));
@@ -133,6 +137,7 @@ public class ReservationService {
         }
         reservation.expire(now);
         lifecycle.apply(reservation.getVehicle(), VehicleState.AVAILABLE);
+        reservationPayments.chargeFee(reservation, now);
         return true;
     }
 }

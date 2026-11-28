@@ -8,10 +8,19 @@ Feature: Reserve an e-bike
     Given a conventional station "Central" with capacity 10
     And an available "E_BIKE" "EB-01" at "Central" with battery 80%
     And Inês is logged in
-    And Inês has a linked card ending in "4242" that the payment sandbox accepts
     And the time is "2026-11-30T07:45:00Z"
 
+  Rule: Reserving needs a linked card (BR2)
+
+    Scenario: A user without a linked card cannot reserve
+      When Inês reserves "EB-01"
+      Then the reservation is refused
+      And "EB-01" is still "AVAILABLE"
+
   Rule: A reservation holds the e-bike exclusively for one user (BR5)
+
+    Background:
+      Given Inês has a linked card ending in "4242" that the payment sandbox accepts
 
     Scenario: Reserving an e-bike holds it for 15 minutes for a fixed fee
       When Inês reserves "EB-01"
@@ -40,6 +49,9 @@ Feature: Reserve an e-bike
 
   Rule: Only eligible e-bikes can be reserved (BR4)
 
+    Background:
+      Given Inês has a linked card ending in "4242" that the payment sandbox accepts
+
     Scenario Outline: An e-bike that is not eligible cannot be reserved
       Given <vehicle>
       When Inês reserves "<code>"
@@ -51,7 +63,10 @@ Feature: Reserve an e-bike
         | a "MAINTENANCE" "E_BIKE" "EB-05" at "Central" with battery 80%       | EB-05 |
         | an available "WHEELCHAIR_BIKE" "WB-02" at "Central" with battery 90% | WB-02 |
 
-  Rule: A reservation expires after 15 minutes (BR5)
+  Rule: A reservation expires after 15 minutes (BR5, BR6)
+
+    Background:
+      Given Inês has a linked card ending in "4242" that the payment sandbox accepts
 
     Scenario Outline: Unlocking at the end of the hold
       Given Inês reserved "EB-01"
@@ -70,8 +85,12 @@ Feature: Reserve an e-bike
       When the reservation expiry check runs
       Then her reservation is "EXPIRED"
       And "EB-01" is "AVAILABLE"
+      And Inês is charged 0.50 € for her reservation
 
   Rule: A used reservation adds its fee to the trip (BR6, BR7)
+
+    Background:
+      Given Inês has a linked card ending in "4242" that the payment sandbox accepts
 
     Scenario: Commute with a reservation (C1)
       Given Inês reserved "EB-01"

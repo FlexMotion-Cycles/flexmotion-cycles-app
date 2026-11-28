@@ -15,6 +15,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.PaymentType;
 import pt.ua.tqs.flexmotion_cycles.domain.Trip;
 import pt.ua.tqs.flexmotion_cycles.ports.PaymentPort;
 import pt.ua.tqs.flexmotion_cycles.ports.PaymentResult;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.PaymentMethodRequiredException;
 
 /** Payment conditions of a trip: a linked card (BR2) and the deposit held on it (BR16). */
 @Service
@@ -39,8 +40,7 @@ public class DepositService {
     /** BR2: without a linked payment method a trip is refused. */
     public PaymentMethod requireDefaultCard(String username) {
         return paymentMethodRepository.findByUsernameAndDefaultMethodTrue(username)
-                .orElseThrow(() -> new UnlockRefusedException(
-                        "A linked payment method is required to unlock a vehicle"));
+                .orElseThrow(PaymentMethodRequiredException::new);
     }
 
     /**

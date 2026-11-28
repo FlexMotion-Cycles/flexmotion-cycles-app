@@ -38,6 +38,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 import pt.ua.tqs.flexmotion_cycles.ports.PaymentPort;
 import pt.ua.tqs.flexmotion_cycles.ports.PaymentResult;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.PaymentMethodRequiredException;
 
 @ExtendWith(MockitoExtension.class)
 class DepositServiceTest {
@@ -92,7 +93,7 @@ class DepositServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> depositService.requireDefaultCard(INES))
-                .isInstanceOf(UnlockRefusedException.class);
+                .isInstanceOf(PaymentMethodRequiredException.class);
     }
 
     @Test

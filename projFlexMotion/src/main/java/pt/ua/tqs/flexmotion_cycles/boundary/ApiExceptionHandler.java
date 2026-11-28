@@ -14,6 +14,7 @@ import pt.ua.tqs.flexmotion_cycles.services.exceptions.DuplicateVehicleCodeExcep
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStateTransitionException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.InvalidStationException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.PaymentGatewayException;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.PaymentMethodRequiredException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationNotFoundException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationRefusedException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.RoleChangeNotAllowedException;
@@ -69,7 +70,8 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler({StationFullException.class, DuplicateVehicleCodeException.class,
-            InvalidStateTransitionException.class, ReservationRefusedException.class})
+            InvalidStateTransitionException.class, ReservationRefusedException.class,
+            PaymentMethodRequiredException.class})
     ProblemDetail handleConflict(RuntimeException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
     }

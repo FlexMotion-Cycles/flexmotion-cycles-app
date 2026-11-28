@@ -3,6 +3,7 @@ package pt.ua.tqs.flexmotion_cycles.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,6 +38,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.Vehicle;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleState;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleStatus;
 import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
+import pt.ua.tqs.flexmotion_cycles.services.exceptions.PaymentMethodRequiredException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationNotFoundException;
 import pt.ua.tqs.flexmotion_cycles.services.exceptions.ReservationRefusedException;
 
@@ -63,6 +65,9 @@ class ReservationServiceTest {
 
     @Mock
     private MaintenanceTicketRepository maintenanceTicketRepository;
+
+    @Mock
+    private ReservationPaymentService reservationPayments;
 
     private ReservationService service;
     private Station central;
@@ -123,6 +128,18 @@ class ReservationServiceTest {
 
     @Test
     @Requirement("FM-29")
+    void refusesUserWithoutALinkedCard() {
+        Vehicle ebike = vehicleFound("EB-01", VehicleType.E_BIKE, 80);
+        doThrow(new PaymentMethodRequiredException()).when(reservationPayments).requireCard(USERNAME);
+
+        assertThatThrownBy(() -> service.reserve(USERNAME, "EB-01"))
+                .isInstanceOf(PaymentMethodRequiredException.class);
+        verify(reservationRepository, never()).save(any());
+        assertThat(ebike.getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    }
+
+    @Test
+    @Requirement("FM-29")
     void refusesUnknownVehicle() {
         when(vehicleRepository.findLockedByCode("EB-99")).thenReturn(Optional.empty());
 
@@ -153,6 +170,16 @@ class ReservationServiceTest {
         assertThat(expired).isTrue();
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
         assertThat(reservation.getVehicle().getStatus()).isEqualTo(VehicleStatus.AVAILABLE);
+    }
+
+    @Test
+    @Requirement("FM-29")
+    void expiredReservationIsChargedItsFee() {
+        Reservation reservation = activeReservationFound(1L);
+
+        serviceAt(HOLD_ENDS_AT).expireIfDue(1L);
+
+        verify(reservationPayments).chargeFee(reservation, HOLD_ENDS_AT);
     }
 
     @Test
@@ -236,6 +263,7 @@ class ReservationServiceTest {
 
         assertThat(fulfilled).containsSame(reservation);
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.FULFILLED);
+        verify(reservationPayments, never()).chargeFee(any(), any());
     }
 
     @Test
@@ -309,7 +337,7 @@ class ReservationServiceTest {
     private ReservationService serviceAt(Instant now) {
         return new ReservationService(vehicleRepository, reservationRepository, tripRepository,
                 new ConventionalVehicleEligibility(maintenanceTicketRepository, tripRepository),
-                RESERVATION, Clock.fixed(now, ZoneOffset.UTC));
+                reservationPayments, RESERVATION, Clock.fixed(now, ZoneOffset.UTC));
     }
 
     /** A vehicle already RESERVED, as it is while its reservation is ACTIVE. */

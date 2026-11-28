@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import pt.ua.tqs.flexmotion_cycles.TestcontainersConfiguration;
+import pt.ua.tqs.flexmotion_cycles.adapters.payment.FakePaymentAdapter;
 import pt.ua.tqs.flexmotion_cycles.data.MaintenanceTicketRepository;
 import pt.ua.tqs.flexmotion_cycles.data.PaymentMethodRepository;
 import pt.ua.tqs.flexmotion_cycles.data.PaymentRepository;
@@ -39,6 +40,7 @@ import pt.ua.tqs.flexmotion_cycles.domain.VehicleType;
 class ReservationConcurrencyIT {
 
     private final ReservationService reservationService;
+    private final PaymentMethodService paymentMethodService;
     private final PaymentRepository paymentRepository;
     private final PaymentMethodRepository paymentMethodRepository;
     private final ReservationRepository reservationRepository;
@@ -51,12 +53,14 @@ class ReservationConcurrencyIT {
 
     @Autowired
     ReservationConcurrencyIT(ReservationService reservationService,
+            PaymentMethodService paymentMethodService,
             PaymentRepository paymentRepository, PaymentMethodRepository paymentMethodRepository,
             ReservationRepository reservationRepository, TripRepository tripRepository,
             MaintenanceTicketRepository maintenanceTicketRepository,
             VehicleRepository vehicleRepository,
             StationRepository stationRepository, PlatformTransactionManager transactionManager) {
         this.reservationService = reservationService;
+        this.paymentMethodService = paymentMethodService;
         this.paymentRepository = paymentRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.reservationRepository = reservationRepository;
@@ -82,6 +86,9 @@ class ReservationConcurrencyIT {
         Station central = stationRepository.save(
                 new Station("Central", 40.6405, -8.6538, 10, StationType.CONVENTIONAL));
         vehicleRepository.save(new Vehicle("EB-01", VehicleType.E_BIKE, 80, central));
+        // Reserving needs a linked card (BR2).
+        paymentMethodService.link("ines", FakePaymentAdapter.APPROVED_CARD);
+        paymentMethodService.link("rui", FakePaymentAdapter.APPROVED_CARD);
     }
 
     @Test

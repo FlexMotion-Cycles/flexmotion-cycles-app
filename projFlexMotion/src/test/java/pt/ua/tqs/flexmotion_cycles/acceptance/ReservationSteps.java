@@ -14,8 +14,12 @@ import io.restassured.path.json.config.JsonPathConfig;
 import io.restassured.response.Response;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import pt.ua.tqs.flexmotion_cycles.adapters.payment.FakePaymentAdapter;
+import pt.ua.tqs.flexmotion_cycles.services.PaymentMethodService;
 import pt.ua.tqs.flexmotion_cycles.services.ReservationExpiryScheduler;
 import pt.ua.tqs.flexmotion_cycles.services.ReservationService;
 
@@ -26,7 +30,9 @@ public class ReservationSteps {
 
     private final MutableClock clock;
     private final ReservationService reservationService;
+    private final PaymentMethodService paymentMethodService;
     private final ReservationExpiryScheduler expiryScheduler;
+    private final JdbcTemplate jdbcTemplate;
     private final int port;
     private final String username;
     private final String password;
@@ -35,13 +41,16 @@ public class ReservationSteps {
     private Long reservationId;
 
     public ReservationSteps(MutableClock clock, ReservationService reservationService,
-            ReservationExpiryScheduler expiryScheduler,
+            PaymentMethodService paymentMethodService,
+            ReservationExpiryScheduler expiryScheduler, JdbcTemplate jdbcTemplate,
             @Value("${local.server.port}") int port,
             @Value("${spring.security.user.name}") String username,
             @Value("${spring.security.user.password}") String password) {
         this.clock = clock;
         this.reservationService = reservationService;
+        this.paymentMethodService = paymentMethodService;
         this.expiryScheduler = expiryScheduler;
+        this.jdbcTemplate = jdbcTemplate;
         this.port = port;
         this.username = username;
         this.password = password;
@@ -70,9 +79,10 @@ public class ReservationSteps {
         assertThat(response.statusCode()).isEqualTo(HttpStatus.CREATED.value());
     }
 
-    /** Through the service: HTTP Basic only has Inês's account until US-01. */
+    /** Through the services: HTTP Basic only has Inês's account until US-01. */
     @Given("another user reserved {string}")
     public void anotherUserReserved(String code) {
+        paymentMethodService.link(OTHER_USER, FakePaymentAdapter.APPROVED_CARD);
         reservationService.reserve(OTHER_USER, code);
     }
 
@@ -98,6 +108,16 @@ public class ReservationSteps {
         assertThat(Instant.parse(reservation.getString("expiresAt")))
                 .isEqualTo(Instant.parse(expiresAt));
         assertThat(reservation.<BigDecimal>get("fee")).isEqualByComparingTo(fee);
+    }
+
+    @Then("Inês is charged {bigdecimal} € for her reservation")
+    public void inesIsChargedForHerReservation(BigDecimal amount) {
+        Map<String, Object> payment = jdbcTemplate.queryForMap(
+                "SELECT type, status, amount FROM payments WHERE reservation_id = ?",
+                reservationId);
+        assertThat(payment.get("type")).isEqualTo("RESERVATION_FEE");
+        assertThat(payment.get("status")).isEqualTo("CAPTURED");
+        assertThat((BigDecimal) payment.get("amount")).isEqualByComparingTo(amount);
     }
 
     private JsonPath herReservation() {
