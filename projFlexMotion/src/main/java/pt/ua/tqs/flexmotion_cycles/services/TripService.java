@@ -18,6 +18,7 @@ import pt.ua.tqs.flexmotion_cycles.data.StationRepository;
 import pt.ua.tqs.flexmotion_cycles.data.TripRepository;
 import pt.ua.tqs.flexmotion_cycles.data.VehicleRepository;
 import pt.ua.tqs.flexmotion_cycles.domain.GeoPoint;
+import pt.ua.tqs.flexmotion_cycles.domain.PaymentMethod;
 import pt.ua.tqs.flexmotion_cycles.domain.Station;
 import pt.ua.tqs.flexmotion_cycles.domain.StationType;
 import pt.ua.tqs.flexmotion_cycles.domain.TicketStatus;
@@ -48,12 +49,13 @@ public class TripService {
     private final TripCostCalculator costCalculator;
     private final TripProperties tripProperties;
     private final Clock clock;
+    private final DepositService depositService;
 
     public TripService(VehicleRepository vehicleRepository,
             MaintenanceTicketRepository maintenanceTicketRepository,
             TripRepository tripRepository, StationRepository stationRepository,
             TelemetryPort telemetryPort, TripCostCalculator costCalculator,
-            TripProperties tripProperties, Clock clock) {
+            TripProperties tripProperties, Clock clock, DepositService depositService) {
         this.vehicleRepository = vehicleRepository;
         this.maintenanceTicketRepository = maintenanceTicketRepository;
         this.tripRepository = tripRepository;
@@ -62,11 +64,14 @@ public class TripService {
         this.costCalculator = costCalculator;
         this.tripProperties = tripProperties;
         this.clock = clock;
+        this.depositService = depositService;
     }
 
     /**
-     * Unlock without a reservation (immediate use): checks the rules, records the request and
-     * sends the unlock command. The trip only starts when the lock opens (BR7).
+     * Unlock without a reservation (immediate use): checks the vehicle rules, requires a linked
+     * card (BR2), records the request, authorizes the deposit (BR16) and only then sends the
+     * unlock command, so the vehicle never opens on a refused trip. The trip only starts when
+     * the lock opens (BR7).
      */
     @Transactional
     public Trip requestUnlock(String username, String vehicleCode) {
@@ -78,7 +83,9 @@ public class TripService {
         if (!isUnlockable(vehicle)) {
             throw new UnlockRefusedException("Vehicle " + vehicleCode + " cannot be unlocked");
         }
+        PaymentMethod card = depositService.requireDefaultCard(username);
         Trip trip = tripRepository.save(new Trip(username, vehicle, clock.instant()));
+        depositService.authorizeDeposit(trip, card);
         telemetryPort.sendUnlockCommand(vehicleCode);
         return trip;
     }
